@@ -1,0 +1,147 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bg:      #0D0A1A;
+  --color-surface: #15112A;
+  --color-surface-2: #1E1A35;
+  --color-gold:    #C9A84C;
+  --color-gold-2:  #E8C96A;
+  --color-saffron: #D97706;
+  --color-text:    #F0E4C8;
+  --color-muted:   rgba(240,228,200,0.45);
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-body:    "Inter", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  background-color: #0D0A1A;
+  color: #F0E4C8;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100vh;
+  /* Musical note watermark — brighter on dark */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Ctext x='10' y='50' font-size='36' fill='rgba(201%2C168%2C76%2C0.09)' font-family='serif'%3E%E2%99%AA%3C/text%3E%3Ctext x='120' y='130' font-size='28' fill='rgba(201%2C168%2C76%2C0.07)' font-family='serif'%3E%E2%99%AB%3C/text%3E%3Ctext x='190' y='55' font-size='22' fill='rgba(201%2C168%2C76%2C0.08)' font-family='serif'%3E%E2%99%AD%3C/text%3E%3Ctext x='55' y='185' font-size='30' fill='rgba(201%2C168%2C76%2C0.07)' font-family='serif'%3E%E2%99%AC%3C/text%3E%3Ctext x='170' y='200' font-size='26' fill='rgba(201%2C168%2C76%2C0.08)' font-family='serif'%3E%E2%99%A9%3C/text%3E%3Ctext x='90' y='245' font-size='20' fill='rgba(201%2C168%2C76%2C0.06)' font-family='serif'%3E%E2%99%AF%3C/text%3E%3C/svg%3E");
+  background-repeat: repeat;
+}
+
+h1, h2, h3 { font-family: var(--font-display); }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(201,168,76,0.25); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(201,168,76,0.5); }
+
+/* Card */
+.sv-card {
+  background: #15112A;
+  border: 1px solid rgba(201,168,76,0.12);
+  border-radius: 1rem;
+  box-shadow: 0 2px 16px rgba(0,0,0,0.35), 0 1px 4px rgba(0,0,0,0.2);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+.sv-card:hover {
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 2px 8px rgba(0,0,0,0.3);
+  border-color: rgba(201,168,76,0.35);
+  transform: translateY(-2px);
+}
+
+/* Gold shimmer button */
+.btn-gold {
+  background: linear-gradient(135deg, #D97706, #C9A84C, #E8C96A, #C9A84C);
+  background-size: 200% 200%;
+  color: #1A0A2E;
+  font-weight: 700;
+  border-radius: 0.5rem;
+  padding: 0.6rem 1.4rem;
+  border: none;
+  cursor: pointer;
+  transition: background-position 0.4s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  font-family: var(--font-body);
+  letter-spacing: 0.02em;
+}
+.btn-gold:hover {
+  background-position: right center;
+  box-shadow: 0 4px 18px rgba(201,168,76,0.5);
+  transform: translateY(-1px);
+}
+.btn-gold:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+/* Outline button */
+.btn-outline {
+  background: transparent;
+  color: #C9A84C;
+  border: 1.5px solid rgba(201,168,76,0.4);
+  border-radius: 0.5rem;
+  padding: 0.6rem 1.4rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: var(--font-body);
+}
+.btn-outline:hover {
+  background: rgba(201,168,76,0.1);
+  border-color: #C9A84C;
+}
+
+/* Form input */
+.sv-input {
+  width: 100%;
+  border: 1.5px solid rgba(201,168,76,0.18);
+  border-radius: 0.6rem;
+  padding: 0.65rem 0.9rem;
+  font-size: 0.9rem;
+  font-family: var(--font-body);
+  background: rgba(255,255,255,0.05);
+  color: #F0E4C8;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+.sv-input:focus {
+  border-color: #C9A84C;
+  box-shadow: 0 0 0 3px rgba(201,168,76,0.12);
+  background: rgba(255,255,255,0.08);
+}
+.sv-input::placeholder { color: rgba(240,228,200,0.3); }
+.sv-input option { background: #1E1A35; color: #F0E4C8; }
+
+/* Badges */
+.badge-mela {
+  background: linear-gradient(135deg, #1e3a8a, #1d4ed8);
+  color: #bfdbfe;
+  font-size: 0.7rem; font-weight: 600;
+  padding: 0.2rem 0.65rem; border-radius: 999px;
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+.badge-janya {
+  background: linear-gradient(135deg, #78350f, #d97706);
+  color: #fde68a;
+  font-size: 0.7rem; font-weight: 600;
+  padding: 0.2rem 0.65rem; border-radius: 999px;
+  letter-spacing: 0.04em; text-transform: uppercase;
+}
+
+/* Ornament divider */
+.ornament {
+  display: flex; align-items: center; gap: 0.75rem;
+  color: rgba(201,168,76,0.5); font-size: 1.1rem; letter-spacing: 0.3em;
+}
+.ornament::before, .ornament::after {
+  content: ''; flex: 1; height: 1px;
+  background: linear-gradient(to right, transparent, rgba(201,168,76,0.3), transparent);
+}
+
+/* Floating notes */
+@keyframes float-note {
+  0%   { transform: translateY(0px) rotate(-5deg); opacity: 0.6; }
+  50%  { transform: translateY(-18px) rotate(5deg); opacity: 1; }
+  100% { transform: translateY(0px) rotate(-5deg); opacity: 0.6; }
+}
+.note-float  { animation: float-note 4s   ease-in-out infinite; }
+.note-float-2 { animation: float-note 5.5s ease-in-out infinite 1s; }
+.note-float-3 { animation: float-note 4.8s ease-in-out infinite 2s; }
+
+

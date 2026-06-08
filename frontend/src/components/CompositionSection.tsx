@@ -1,0 +1,150 @@
+import { useState } from 'react'
+import type { Composition, CompositionType } from '../types'
+import AudioPlayer from './AudioPlayer'
+import AudioUpload from './AudioUpload'
+import { addComposition, updateComposition, deleteComposition } from '../api/ragas'
+
+interface Props {
+  ragaId: string
+  type: CompositionType
+  title: string
+  compositions: Composition[]
+  onChanged: () => void
+}
+
+const empty = (type: CompositionType): Omit<Composition, 'id'> => ({
+  type, name: '', tala: '', description: '', audioUrl: null,
+})
+
+const TYPE_COLORS: Record<CompositionType, { bg: string; border: string; text: string; dot: string }> = {
+  GEETHE:   { bg: 'rgba(30,58,138,0.18)',  border: 'rgba(147,197,253,0.2)', text: '#93c5fd', dot: '#3b82f6' },
+  KRUTHI:   { bg: 'rgba(120,53,15,0.22)',  border: 'rgba(253,186,116,0.2)', text: '#fdba74', dot: '#f97316' },
+  KEERTANE: { bg: 'rgba(20,83,45,0.2)',    border: 'rgba(134,239,172,0.2)', text: '#86efac', dot: '#22c55e' },
+  VARNA:    { bg: 'rgba(76,29,149,0.22)',  border: 'rgba(216,180,254,0.2)', text: '#d8b4fe', dot: '#a855f7' },
+}
+
+export default function CompositionSection({ ragaId, type, title, compositions, onChanged }: Props) {
+  const [adding, setAdding] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [form, setForm] = useState<Omit<Composition, 'id'>>(empty(type))
+  const [open, setOpen] = useState(true)
+
+  const items = compositions.filter(c => c.type === type)
+  const colors = TYPE_COLORS[type]
+
+  const resetForm = () => { setForm(empty(type)); setAdding(false); setEditingId(null) }
+
+  const startEdit = (c: Composition) => {
+    setForm({ type: c.type, name: c.name, tala: c.tala, description: c.description, audioUrl: c.audioUrl })
+    setEditingId(c.id)
+    setAdding(false)
+  }
+
+  const handleSave = async () => {
+    if (!form.name || !form.tala) return
+    if (editingId) await updateComposition(ragaId, editingId, form)
+    else await addComposition(ragaId, form)
+    resetForm()
+    onChanged()
+  }
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Delete this composition?')) return
+    await deleteComposition(ragaId, id)
+    onChanged()
+  }
+
+  const showForm = adding || editingId !== null
+
+  return (
+    <div className="mb-5">
+      {/* Section header */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          width: '100%', background: 'none', border: 'none', cursor: 'pointer', padding: '0.5rem 0',
+          borderBottom: `2px solid ${colors.border}`,
+        }}
+      >
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+          <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: colors.dot, display: 'inline-block', flexShrink: 0 }} />
+          <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.05rem', fontWeight: 600, color: colors.text }}>
+            {title}
+          </span>
+          {items.length > 0 && (
+            <span style={{ fontSize: '0.7rem', background: colors.bg, color: colors.text, border: `1px solid ${colors.border}`, borderRadius: '999px', padding: '0.1rem 0.5rem', fontWeight: 600 }}>
+              {items.length}
+            </span>
+          )}
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {!showForm && (
+            <span
+              onClick={e => { e.stopPropagation(); setAdding(true); setOpen(true) }}
+              style={{ fontSize: '0.78rem', color: colors.text, fontWeight: 600, textDecoration: 'underline', cursor: 'pointer' }}
+            >
+              + Add
+            </span>
+          )}
+          <span style={{ color: '#a89880', fontSize: '0.9rem' }}>{open ? '▲' : '▼'}</span>
+        </div>
+      </button>
+
+      {open && (
+        <div className="mt-3">
+          {items.length === 0 && !showForm && (
+            <p style={{ color: 'rgba(240,228,200,0.3)', fontSize: '0.85rem', fontStyle: 'italic', paddingLeft: '1rem', margin: '0.5rem 0 1rem' }}>
+              No {title.toLowerCase()} added yet.
+            </p>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: showForm ? '1rem' : 0 }}>
+            {items.map(c => (
+              <div key={c.id} style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '0.75rem', padding: '1rem 1.1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                <div>
+                  <p style={{ fontWeight: 600, color: '#F0E4C8', margin: '0 0 0.2rem', fontSize: '0.95rem', fontFamily: 'var(--font-display)' }}>{c.name}</p>
+                  <p style={{ fontSize: '0.78rem', color: colors.text, margin: '0 0 0.35rem', fontWeight: 500 }}>Tala: {c.tala}</p>
+                  {c.description && <p style={{ fontSize: '0.82rem', color: 'rgba(240,228,200,0.55)', margin: '0 0 0.5rem' }}>{c.description}</p>}
+                  {c.audioUrl && <AudioPlayer url={c.audioUrl} />}
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem', marginLeft: '1rem', flexShrink: 0 }}>
+                  <button onClick={() => startEdit(c)} style={{ fontSize: '0.75rem', color: 'rgba(240,228,200,0.45)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Edit</button>
+                  <button onClick={() => handleDelete(c.id)} style={{ fontSize: '0.75rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Delete</button>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {showForm && (
+            <div style={{ background: 'rgba(255,255,255,0.03)', border: `1.5px solid ${colors.border}`, borderRadius: '0.75rem', padding: '1.1rem', marginTop: '0.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'rgba(201,168,76,0.65)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem' }}>Name *</label>
+                  <input className="sv-input" style={{ fontSize: '0.875rem' }} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'rgba(201,168,76,0.65)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem' }}>Tala *</label>
+                  <input className="sv-input" style={{ fontSize: '0.875rem' }} value={form.tala} onChange={e => setForm(f => ({ ...f, tala: e.target.value }))} />
+                </div>
+              </div>
+              <div style={{ marginBottom: '0.75rem' }}>
+                <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: '#92785E', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem' }}>Description</label>
+                <textarea className="sv-input" rows={2} style={{ resize: 'vertical', fontSize: '0.875rem' }} value={form.description ?? ''} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} />
+              </div>
+              {ragaId !== 'new' && (
+                <div style={{ marginBottom: '0.75rem' }}>
+                  <AudioUpload ragaId={ragaId} compositionId={editingId ?? undefined} existingUrl={form.audioUrl} onUploaded={url => setForm(f => ({ ...f, audioUrl: url }))} label="audio" />
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: '0.6rem' }}>
+                <button onClick={handleSave} className="btn-gold" style={{ fontSize: '0.85rem', padding: '0.45rem 1.1rem' }}>Save</button>
+                <button onClick={resetForm} className="btn-outline" style={{ fontSize: '0.85rem', padding: '0.45rem 1.1rem' }}>Cancel</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
