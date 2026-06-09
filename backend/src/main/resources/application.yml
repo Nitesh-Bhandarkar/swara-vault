@@ -32,17 +32,18 @@ server:
   servlet:
     session:
       cookie:
-        same-site: none
-        secure: true
+        same-site: ${SESSION_COOKIE_SAME_SITE:none}
+        secure: ${SESSION_COOKIE_SECURE:true}
         http-only: true
 
 storage:
-  r2:
-    endpoint: ${R2_ENDPOINT}
-    access-key: ${R2_ACCESS_KEY}
-    secret-key: ${R2_SECRET_KEY}
-    bucket: ${R2_BUCKET:swara-vault-audio}
-    public-url: ${R2_PUBLIC_URL}
+  s3:
+    bucket: ${S3_BUCKET}
+    region: ${AWS_REGION:us-east-1}
+    endpoint: ${S3_ENDPOINT:}        # blank = native AWS S3; set for Cloudflare R2 or MinIO
+    access-key: ${S3_ACCESS_KEY:}    # blank = use EC2 IAM role; set for R2/custom
+    secret-key: ${S3_SECRET_KEY:}
+    public-url: ${S3_PUBLIC_URL}     # CloudFront URL or S3/R2 public bucket URL
 
 cors:
-  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173}
+  allowed-origins: ${CORS_ALLOWED_ORIGINS}

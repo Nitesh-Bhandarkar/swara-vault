@@ -13,35 +13,35 @@ import java.net.URI;
 @Configuration
 public class StorageConfig {
 
-    @Value("${storage.r2.endpoint}")
+    @Value("${storage.s3.endpoint:}")
     private String endpoint;
 
-    @Value("${storage.r2.access-key}")
+    @Value("${storage.s3.access-key:}")
     private String accessKey;
 
-    @Value("${storage.r2.secret-key}")
+    @Value("${storage.s3.secret-key:}")
     private String secretKey;
 
+    @Value("${storage.s3.region:us-east-1}")
+    private String region;
+
     @Bean
-    public AwsCredentialsProvider r2CredentialsProvider() {
-        return StaticCredentialsProvider.create(AwsBasicCredentials.create(accessKey, secretKey));
+    public S3Client s3Client() {
+        var builder = S3Client.builder().region(Region.of(region));
+        if (!endpoint.isBlank()) builder.endpointOverride(URI.create(endpoint));
+        if (!accessKey.isBlank())
+            builder.credentialsProvider(StaticCredentialsProvider.create(
+                AwsBasicCredentials.create(accessKey, secretKey)));
+        return builder.build();
     }
 
     @Bean
-    public S3Client s3Client(AwsCredentialsProvider credentialsProvider) {
-        return S3Client.builder()
-            .endpointOverride(URI.create(endpoint))
-            .credentialsProvider(credentialsProvider)
-            .region(Region.of("auto"))
-            .build();
-    }
-
-    @Bean
-    public S3Presigner s3Presigner(AwsCredentialsProvider credentialsProvider) {
-        return S3Presigner.builder()
-            .endpointOverride(URI.create(endpoint))
-            .credentialsProvider(credentialsProvider)
-            .region(Region.of("auto"))
-            .build();
+    public S3Presigner s3Presigner() {
+        var builder = S3Presigner.builder().region(Region.of(region));
+        if (!endpoint.isBlank()) builder.endpointOverride(URI.create(endpoint));
+        if (!accessKey.isBlank())
+            builder.credentialsProvider(StaticCredentialsProvider.create(
+                AwsBasicCredentials.create(accessKey, secretKey)));
+        return builder.build();
     }
 }

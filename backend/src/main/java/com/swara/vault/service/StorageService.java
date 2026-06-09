@@ -17,10 +17,10 @@ public class StorageService {
 
     private final S3Presigner presigner;
 
-    @Value("${storage.r2.bucket}")
+    @Value("${storage.s3.bucket}")
     private String bucket;
 
-    @Value("${storage.r2.public-url}")
+    @Value("${storage.s3.public-url}")
     private String publicUrl;
 
     public UploadUrlResponse generateUploadUrl(UploadUrlRequest req) {
@@ -51,7 +51,7 @@ public class StorageService {
         if (req.compositionId() != null) {
             return "ragas/%s/compositions/%s%s".formatted(req.ragaId(), req.compositionId(), ext);
         }
-        return "ragas/%s/%s%s".formatted(req.ragaId(), sanitize(req.filename()), ext.isEmpty() ? "" : "");
+        return "ragas/%s/%s".formatted(req.ragaId(), sanitize(req.filename()));
     }
 
     private String extractExtension(String filename) {
