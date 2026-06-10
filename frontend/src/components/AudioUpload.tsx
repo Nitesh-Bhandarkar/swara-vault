@@ -56,7 +56,7 @@ export default function AudioUpload({ ragaId, compositionId, existingUrl, onUplo
         <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 500 }}>✓ Audio uploaded</span>
       )}
       {error && <span style={{ fontSize: '0.72rem', color: '#ef4444' }}>{error}</span>}
-      <input ref={inputRef} type="file" accept="audio/*,video/mpeg,video/mpg,video/x-mpeg" className="hidden" onChange={handleFile} />
+      <input ref={inputRef} type="file" className="hidden" onChange={handleFile} />
     </div>
   )
 }
