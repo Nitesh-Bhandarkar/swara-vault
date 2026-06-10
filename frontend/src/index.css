@@ -179,6 +179,16 @@ h1, h2, h3 { font-family: var(--font-display); }
   cursor: pointer;
 }
 
+/* Modal animations */
+@keyframes modal-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes modal-slide-up {
+  from { transform: translateY(16px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
 /* Floating notes */
 @keyframes float-note {
   0%   { transform: translateY(0px) rotate(-5deg); opacity: 0.6; }
