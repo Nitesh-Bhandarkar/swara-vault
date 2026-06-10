@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { login } from '../api/auth'
 import NoteSpinner from '../components/NoteSpinner'
 
 export default function LoginPage() {
   const navigate = useNavigate()
+  const qc = useQueryClient()
   const [form, setForm] = useState({ username: '', password: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -14,7 +16,12 @@ export default function LoginPage() {
     setLoading(true)
     setError('')
     try {
-      await login(form.username, form.password)
+      const { data } = await login(form.username, form.password)
+      // Pre-populate the ['me'] cache so ProtectedRoute renders immediately
+      // without needing a second GET /auth/me request. This eliminates the
+      // race condition on mobile where the session cookie hasn't been
+      // committed to the cookie store before the next request fires.
+      qc.setQueryData(['me'], data)
       navigate('/')
     } catch {
       setError('Invalid username or password')
