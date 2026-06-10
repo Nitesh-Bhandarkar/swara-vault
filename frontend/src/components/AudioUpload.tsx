@@ -17,7 +17,10 @@ export default function AudioUpload({ ragaId, compositionId, existingUrl, onUplo
   const handleFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    if (file.type && !file.type.startsWith('audio/')) { setError('Only audio files accepted'); return }
+    const MPEG_TYPES = ['video/mpeg', 'video/mpg', 'video/x-mpeg']
+    if (file.type && !file.type.startsWith('audio/') && !MPEG_TYPES.includes(file.type)) {
+      setError('Only audio files accepted'); return
+    }
     if (file.size > 50 * 1024 * 1024) { setError('File too large (max 50 MB)'); return }
     setUploading(true); setError('')
     try {
@@ -53,7 +56,7 @@ export default function AudioUpload({ ragaId, compositionId, existingUrl, onUplo
         <span style={{ fontSize: '0.72rem', color: '#16a34a', fontWeight: 500 }}>✓ Audio uploaded</span>
       )}
       {error && <span style={{ fontSize: '0.72rem', color: '#ef4444' }}>{error}</span>}
-      <input ref={inputRef} type="file" accept="audio/*" className="hidden" onChange={handleFile} />
+      <input ref={inputRef} type="file" accept="audio/*,.mpeg,.mpg" className="hidden" onChange={handleFile} />
     </div>
   )
 }

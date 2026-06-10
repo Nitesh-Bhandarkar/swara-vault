@@ -23,8 +23,13 @@ public class StorageService {
     @Value("${storage.s3.public-url}")
     private String publicUrl;
 
+    private static final java.util.Set<String> MPEG_VIDEO_TYPES = java.util.Set.of(
+        "video/mpeg", "video/mpg", "video/x-mpeg"
+    );
+
     public UploadUrlResponse generateUploadUrl(UploadUrlRequest req) {
-        if (!req.contentType().toLowerCase().startsWith("audio/")) {
+        String ct = req.contentType().toLowerCase();
+        if (!ct.startsWith("audio/") && !MPEG_VIDEO_TYPES.contains(ct)) {
             throw new IllegalArgumentException("Content type not permitted: " + req.contentType());
         }
         String fileKey = buildFileKey(req);
