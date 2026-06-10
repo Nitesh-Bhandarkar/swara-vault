@@ -74,16 +74,44 @@ export default function RagaFormPage() {
 
   const handleFinishCreate = async () => {
     if (!createdId) return
-    // Save audio URLs if uploaded
     if (createdForm.arohanaAudioUrl || createdForm.avarohanaAudioUrl) {
       try {
+        // Must send the full RagaRequest payload — backend requires name + janya
         await updateRaga(createdId, {
+          name: form.name,
+          janya: form.janya,
+          janakaRagaId: form.janya ? form.janakaRagaId || undefined : undefined,
+          melakarataNumber: !form.janya ? parseInt(form.melakarataNumber) || undefined : undefined,
+          arohana: form.arohana || undefined,
+          avarohana: form.avarohana || undefined,
           arohanaAudioUrl: createdForm.arohanaAudioUrl || undefined,
           avarohanaAudioUrl: createdForm.avarohanaAudioUrl || undefined,
         })
-      } catch { /* ignore audio save errors */ }
+      } catch { /* non-blocking */ }
     }
     navigate(`/ragas/${createdId}`)
+  }
+
+  // In edit mode: save the audio URL to the backend immediately after R2 upload,
+  // without requiring the user to click "Save changes" separately.
+  const handleEditAudioUploaded = async (field: 'arohanaAudioUrl' | 'avarohanaAudioUrl', url: string) => {
+    const updated = { ...form, [field]: url }
+    setForm(updated)
+    if (!isEdit || !id) return
+    try {
+      await updateRaga(id, {
+        name: updated.name,
+        janya: updated.janya,
+        janakaRagaId: updated.janya ? updated.janakaRagaId || undefined : undefined,
+        melakarataNumber: !updated.janya ? parseInt(updated.melakarataNumber) || undefined : undefined,
+        arohana: updated.arohana || undefined,
+        avarohana: updated.avarohana || undefined,
+        arohanaAudioUrl: updated.arohanaAudioUrl || undefined,
+        avarohanaAudioUrl: updated.avarohanaAudioUrl || undefined,
+      })
+      qc.invalidateQueries({ queryKey: ['raga', id] })
+      qc.invalidateQueries({ queryKey: ['ragas'] })
+    } catch { /* non-blocking — URL already set in form state */ }
   }
 
   const f = (field: keyof FormState) =>
@@ -200,12 +228,12 @@ export default function RagaFormPage() {
             <div className="mb-4">
               {label('Arohana')}
               <input type="text" className="sv-input" style={{ fontFamily: 'monospace', letterSpacing: '0.05em' }} value={form.arohana} onChange={f('arohana')} placeholder="S R2 G3 M1 P D2 N3 S'" />
-              {isEdit && <div className="mt-2"><AudioUpload ragaId={id!} existingUrl={form.arohanaAudioUrl || null} onUploaded={url => setForm(p => ({ ...p, arohanaAudioUrl: url }))} label="arohana audio" /></div>}
+              {isEdit && <div className="mt-2"><AudioUpload ragaId={id!} existingUrl={form.arohanaAudioUrl || null} onUploaded={url => handleEditAudioUploaded('arohanaAudioUrl', url)} label="arohana audio" /></div>}
             </div>
             <div>
               {label('Avarohana')}
               <input type="text" className="sv-input" style={{ fontFamily: 'monospace', letterSpacing: '0.05em' }} value={form.avarohana} onChange={f('avarohana')} placeholder="S' N3 D2 P M1 G3 R2 S" />
-              {isEdit && <div className="mt-2"><AudioUpload ragaId={id!} existingUrl={form.avarohanaAudioUrl || null} onUploaded={url => setForm(p => ({ ...p, avarohanaAudioUrl: url }))} label="avarohana audio" /></div>}
+              {isEdit && <div className="mt-2"><AudioUpload ragaId={id!} existingUrl={form.avarohanaAudioUrl || null} onUploaded={url => handleEditAudioUploaded('avarohanaAudioUrl', url)} label="avarohana audio" /></div>}
             </div>
             {!isEdit && <p style={{ marginTop: '0.75rem', fontSize: '0.78rem', color: 'rgba(240,228,200,0.3)', fontStyle: 'italic' }}>Audio upload available on the next step after saving.</p>}
           </div>
