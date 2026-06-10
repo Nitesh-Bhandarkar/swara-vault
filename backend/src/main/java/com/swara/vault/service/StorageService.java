@@ -57,7 +57,8 @@ public class StorageService {
     private String buildFileKey(UploadUrlRequest req) {
         String ext = extractExtension(req.filename());
         if (req.compositionId() != null) {
-            return "ragas/%s/compositions/%s%s".formatted(req.ragaId(), req.compositionId(), ext);
+            String uid = java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+            return "ragas/%s/compositions/%s/%s%s".formatted(req.ragaId(), req.compositionId(), uid, ext);
         }
         return "ragas/%s/%s".formatted(req.ragaId(), sanitize(req.filename()));
     }
