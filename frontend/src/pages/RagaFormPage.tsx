@@ -168,7 +168,7 @@ export default function RagaFormPage() {
                   <label key={String(v)} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', padding: '0.6rem 1.1rem', border: `1.5px solid ${form.janya === v ? '#C9A84C' : 'rgba(201,168,76,0.2)'}`, borderRadius: '0.6rem', background: form.janya === v ? 'rgba(201,168,76,0.08)' : 'transparent', transition: 'all 0.2s' }}>
                     <input type="radio" name="janya" checked={form.janya === v} onChange={() => setForm(p => ({ ...p, janya: v }))} style={{ accentColor: '#C9A84C' }} />
                     <span style={{ fontSize: '0.9rem', fontWeight: form.janya === v ? 600 : 400, color: form.janya === v ? '#E8C96A' : 'rgba(240,228,200,0.45)' }}>
-                      {v ? 'Janya' : 'Janaka / Melakarta'}
+                      {v ? 'Janya' : 'Melakarta'}
                     </span>
                   </label>
                 ))}

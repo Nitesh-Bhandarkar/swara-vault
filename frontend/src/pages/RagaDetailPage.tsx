@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate, useParams, Link } from 'react-router-dom'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { getRaga, deleteRaga } from '../api/ragas'
@@ -9,6 +10,9 @@ export default function RagaDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const qc = useQueryClient()
+  const [confirmDelete, setConfirmDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState('')
 
   const { data: raga, isLoading } = useQuery({
     queryKey: ['raga', id],
@@ -16,14 +20,17 @@ export default function RagaDetailPage() {
   })
 
   const handleDelete = async () => {
-    if (!raga || raga.seeded) return
-    if (!confirm(`Delete "${raga.name}"? This cannot be undone.`)) return
+    if (!raga || !id) return
+    setDeleting(true)
+    setDeleteError('')
     try {
-      await deleteRaga(id!)
+      await deleteRaga(id)
       qc.invalidateQueries({ queryKey: ['ragas'] })
       navigate('/')
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Delete failed. Please try again.')
+      setDeleting(false)
+      setConfirmDelete(false)
+      setDeleteError(err.response?.data?.message || 'Delete failed. Please try again.')
     }
   }
 
@@ -82,24 +89,49 @@ export default function RagaDetailPage() {
               </p>
             )}
           </div>
-          <div className="flex gap-2 shrink-0 mt-1">
+          <div className="flex gap-2 shrink-0 mt-1" style={{ alignItems: 'flex-start' }}>
             <Link to={`/ragas/${id}/edit`} className="btn-outline" style={{ fontSize: '0.85rem', padding: '0.45rem 1rem', textDecoration: 'none' }}>
               Edit
             </Link>
             {raga.seeded ? (
               <span
                 title="Seeded ragas cannot be deleted"
-                style={{ fontSize: '0.85rem', padding: '0.45rem 1rem', background: 'transparent', border: '1.5px solid rgba(239,68,68,0.15)', color: 'rgba(252,165,165,0.3)', borderRadius: '0.5rem', cursor: 'not-allowed' }}
+                style={{ fontSize: '0.85rem', padding: '0.45rem 1rem', background: 'transparent', border: '1.5px solid rgba(239,68,68,0.15)', color: 'rgba(252,165,165,0.3)', borderRadius: '0.5rem', cursor: 'not-allowed', display: 'inline-block' }}
               >
                 Delete
               </span>
-            ) : (
+            ) : !confirmDelete ? (
               <button
-                onClick={handleDelete}
+                type="button"
+                onClick={() => { setConfirmDelete(true); setDeleteError('') }}
                 style={{ fontSize: '0.85rem', padding: '0.45rem 1rem', background: 'transparent', border: '1.5px solid rgba(239,68,68,0.35)', color: 'rgba(252,165,165,0.8)', borderRadius: '0.5rem', cursor: 'pointer', transition: 'all 0.2s' }}
               >
                 Delete
               </button>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.4rem' }}>
+                <p style={{ fontSize: '0.78rem', color: 'rgba(252,165,165,0.9)', margin: 0, whiteSpace: 'nowrap' }}>
+                  Delete "{raga.name}"?
+                </p>
+                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                  <button
+                    type="button"
+                    onClick={handleDelete}
+                    disabled={deleting}
+                    style={{ fontSize: '0.78rem', padding: '0.3rem 0.8rem', background: 'rgba(239,68,68,0.15)', border: '1.5px solid rgba(239,68,68,0.5)', color: '#fca5a5', borderRadius: '0.4rem', cursor: deleting ? 'not-allowed' : 'pointer' }}
+                  >
+                    {deleting ? 'Deleting…' : 'Yes, delete'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setConfirmDelete(false); setDeleteError('') }}
+                    style={{ fontSize: '0.78rem', padding: '0.3rem 0.8rem', background: 'transparent', border: '1.5px solid rgba(201,168,76,0.25)', color: 'rgba(201,168,76,0.6)', borderRadius: '0.4rem', cursor: 'pointer' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+                {deleteError && <p style={{ fontSize: '0.72rem', color: '#fca5a5', margin: 0 }}>{deleteError}</p>}
+              </div>
             )}
           </div>
         </div>

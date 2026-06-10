@@ -18,8 +18,39 @@ export default function Layout({ children }: { children: React.ReactNode }) {
     navigate('/login')
   }
 
+  const instruments = [
+    { icon: '🪕', top: '8%',  left: '2%',  size: '6rem',  opacity: 0.045, rotate: '-20deg' },
+    { icon: '🥁', top: '18%', right: '1%', size: '5rem',  opacity: 0.04,  rotate: '10deg'  },
+    { icon: '🎻', top: '45%', left: '1%',  size: '5.5rem',opacity: 0.04,  rotate: '15deg'  },
+    { icon: '🪘', top: '62%', right: '2%', size: '5rem',  opacity: 0.045, rotate: '-12deg' },
+    { icon: '🎷', top: '78%', left: '3%',  size: '4.5rem',opacity: 0.035, rotate: '25deg'  },
+    { icon: '🎺', top: '88%', right: '3%', size: '4.5rem',opacity: 0.035, rotate: '-8deg'  },
+  ]
+
   return (
-    <div className="min-h-screen" style={{ background: 'var(--color-bg)' }}>
+    <div className="min-h-screen" style={{ background: 'var(--color-bg)', position: 'relative', overflow: 'hidden' }}>
+      {/* Instrument background decorations */}
+      {instruments.map((inst, i) => (
+        <span
+          key={i}
+          aria-hidden="true"
+          style={{
+            position: 'fixed',
+            top: inst.top,
+            left: 'left' in inst ? inst.left : undefined,
+            right: 'right' in inst ? inst.right : undefined,
+            fontSize: inst.size,
+            opacity: inst.opacity,
+            transform: `rotate(${inst.rotate})`,
+            pointerEvents: 'none',
+            userSelect: 'none',
+            zIndex: 0,
+            lineHeight: 1,
+          }}
+        >
+          {inst.icon}
+        </span>
+      ))}
       {/* Header */}
       <header
         style={{
@@ -124,14 +155,14 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       </header>
 
       {/* Page content */}
-      <main className="max-w-5xl mx-auto px-6 py-10">
+      <main className="max-w-5xl mx-auto px-6 py-10" style={{ position: 'relative', zIndex: 1 }}>
         {children}
       </main>
 
       {/* Footer */}
       <footer className="text-center py-6 mt-8" style={{ borderTop: '1px solid rgba(201,168,76,0.15)' }}>
         <p style={{ color: 'rgba(139,120,100,0.5)', fontSize: '0.75rem', letterSpacing: '0.15em', fontFamily: 'var(--font-display)', fontStyle: 'italic' }}>
-          ♩ &nbsp; रागसंग्रह &nbsp; ♪ &nbsp; Raga Sangrah &nbsp; ♫
+          ♩ &nbsp; रागसंग्रह &nbsp; ♪ &nbsp; Raga Sangraha &nbsp; ♫
         </p>
       </footer>
     </div>

@@ -30,7 +30,7 @@ export default function RagaListPage() {
       <div className="text-center mb-10">
         <div className="ornament mb-4"><span>♩ ♪ ♫</span></div>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.6rem', fontWeight: 700, color: '#E8C96A', margin: '0 0 0.5rem', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
-          Raga Sangrah
+          Raga Sangraha
         </h1>
         <p style={{ color: 'rgba(240,228,200,0.55)', fontSize: '1rem', fontStyle: 'italic', fontFamily: 'var(--font-display)', margin: '0 0 0.25rem' }}>
           Explore the treasury of Carnatic Ragas
