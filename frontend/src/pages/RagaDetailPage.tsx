@@ -99,27 +99,41 @@ export default function RagaDetailPage() {
       </div>
 
       {/* Delete action — outside the hero card to avoid any overflow/stacking issues */}
-      {!raga.seeded && (
-        <div style={{ marginBottom: '1.5rem' }}>
-          {!confirmDelete ? (
-            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
-              <button
-                type="button"
-                onClick={() => { setConfirmDelete(true); setDeleteError('') }}
-                style={{
-                  fontSize: '0.82rem', padding: '0.4rem 0.9rem',
-                  background: 'transparent',
-                  border: '1.5px solid rgba(239,68,68,0.35)',
-                  color: 'rgba(252,165,165,0.75)',
-                  borderRadius: '0.5rem', cursor: 'pointer', transition: 'all 0.2s',
-                }}
-                onMouseOver={e => { e.currentTarget.style.borderColor = 'rgba(239,68,68,0.65)'; e.currentTarget.style.color = '#fca5a5' }}
-                onMouseOut={e => { e.currentTarget.style.borderColor = 'rgba(239,68,68,0.35)'; e.currentTarget.style.color = 'rgba(252,165,165,0.75)' }}
-              >
-                Delete Raga
-              </button>
-            </div>
-          ) : (
+      <div style={{ marginBottom: '1.5rem' }}>
+        {raga.seeded ? (
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <span
+              title="Seeded Melakarta ragas cannot be deleted"
+              style={{
+                fontSize: '0.82rem', padding: '0.4rem 0.9rem',
+                background: 'transparent',
+                border: '1.5px solid rgba(239,68,68,0.15)',
+                color: 'rgba(252,165,165,0.25)',
+                borderRadius: '0.5rem', cursor: 'not-allowed', display: 'inline-block',
+              }}
+            >
+              Delete Raga
+            </span>
+          </div>
+        ) : !confirmDelete ? (
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              type="button"
+              onClick={() => { setConfirmDelete(true); setDeleteError('') }}
+              style={{
+                fontSize: '0.82rem', padding: '0.4rem 0.9rem',
+                background: 'transparent',
+                border: '1.5px solid rgba(239,68,68,0.35)',
+                color: 'rgba(252,165,165,0.75)',
+                borderRadius: '0.5rem', cursor: 'pointer', transition: 'all 0.2s',
+              }}
+              onMouseOver={e => { e.currentTarget.style.borderColor = 'rgba(239,68,68,0.65)'; e.currentTarget.style.color = '#fca5a5' }}
+              onMouseOut={e => { e.currentTarget.style.borderColor = 'rgba(239,68,68,0.35)'; e.currentTarget.style.color = 'rgba(252,165,165,0.75)' }}
+            >
+              Delete Raga
+            </button>
+          </div>
+        ) : (
             <div style={{
               background: 'rgba(239,68,68,0.06)',
               border: '1.5px solid rgba(239,68,68,0.3)',
@@ -163,8 +177,7 @@ export default function RagaDetailPage() {
               </div>
             </div>
           )}
-        </div>
-      )}
+      </div>
 
       {/* Arohana / Avarohana */}
       <div className="sv-card mb-6 p-6" style={{ background: '#15112A' }}>
