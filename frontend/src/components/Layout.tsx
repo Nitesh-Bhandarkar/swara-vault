@@ -19,12 +19,12 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   }
 
   const instruments = [
-    { icon: '🪕', top: '8%',  left: '1.5%', size: '7rem',  opacity: 0.25, rotate: '-20deg' },
-    { icon: '🥁', top: '20%', right: '1%',  size: '6rem',  opacity: 0.25, rotate: '10deg'  },
-    { icon: '🎻', top: '45%', left: '0.5%', size: '6.5rem',opacity: 0.25, rotate: '15deg'  },
-    { icon: '🪘', top: '63%', right: '1.5%',size: '6rem',  opacity: 0.25, rotate: '-12deg' },
-    { icon: '🎷', top: '79%', left: '2%',   size: '5.5rem',opacity: 0.25, rotate: '25deg'  },
-    { icon: '🎺', top: '89%', right: '2%',  size: '5.5rem',opacity: 0.25, rotate: '-8deg'  },
+    { icon: '🪕', top: '8%',  left: '1.5%', size: '7rem',  opacity: 0.4, rotate: '-20deg' },
+    { icon: '🥁', top: '20%', right: '1%',  size: '6rem',  opacity: 0.4, rotate: '10deg'  },
+    { icon: '🎻', top: '45%', left: '0.5%', size: '6.5rem',opacity: 0.4, rotate: '15deg'  },
+    { icon: '🪘', top: '63%', right: '1.5%',size: '6rem',  opacity: 0.4, rotate: '-12deg' },
+    { icon: '🎷', top: '79%', left: '2%',   size: '5.5rem',opacity: 0.4, rotate: '25deg'  },
+    { icon: '🎺', top: '89%', right: '2%',  size: '5.5rem',opacity: 0.4, rotate: '-8deg'  },
   ]
 
   return (

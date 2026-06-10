@@ -3,7 +3,6 @@ package com.swara.vault.service;
 import com.swara.vault.dto.RagaDto;
 import com.swara.vault.dto.RagaRequest;
 import com.swara.vault.entity.Raga;
-import com.swara.vault.exception.ForbiddenOperationException;
 import com.swara.vault.exception.ResourceNotFoundException;
 import com.swara.vault.repository.RagaRepository;
 import lombok.RequiredArgsConstructor;
@@ -68,9 +67,6 @@ public class RagaService {
     public void delete(UUID id) {
         Raga raga = ragaRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Raga not found: " + id));
-        if (raga.isSeeded()) {
-            throw new ForbiddenOperationException("Cannot delete a seeded Melakarta Raga");
-        }
         ragaRepository.delete(raga);
     }
 
