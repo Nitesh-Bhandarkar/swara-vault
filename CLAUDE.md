@@ -13,7 +13,14 @@ Carnatic music reference application. A personal vault to catalog Ragas, their A
 │  Hosted on Vercel                                            │
 └───────────────────────────┬─────────────────────────────────┘
                              │ HTTPS  /api/**  (withCredentials)
-                             │ Session cookie (SameSite=None; Secure)
+                             │ Session cookie — first-party on vercel.app
+┌───────────────────────────▼─────────────────────────────────┐
+│  Vercel Edge (API proxy)                                     │
+│  vercel.json rewrites /api/:path* → Railway                  │
+│  Makes all API calls same-origin — fixes mobile Chrome       │
+│  third-party cookie blocking                                 │
+└───────────────────────────┬─────────────────────────────────┘
+                             │ HTTPS forwarded
 ┌───────────────────────────▼─────────────────────────────────┐
 │  Spring Boot 3.5  (Java 21, Maven)                          │
 │  REST API · Spring Security · Spring Session JDBC           │
@@ -22,15 +29,15 @@ Carnatic music reference application. A personal vault to catalog Ragas, their A
             │ JDBC                       │ AWS SDK v2 (S3-compat)
 ┌───────────▼──────────┐   ┌────────────▼────────────────────┐
 │  PostgreSQL           │   │  Cloudflare R2                  │
-│  Hosted on Railway    │   │  MP3 audio file storage         │
+│  Hosted on Railway    │   │  Audio file storage             │
 │  Flyway migrations    │   │  Presigned PUT (upload)         │
 │  Session tables here  │   │  Public URL (playback)          │
 └──────────────────────┘   └─────────────────────────────────┘
 ```
 
-**Auth flow:** Session-based. Spring Session JDBC stores session data in PostgreSQL (`spring_session` / `spring_session_attributes` tables). Frontend sends `credentials: include` on every request. Login sets `HttpOnly; SameSite=None; Secure` cookie.
+**Auth flow:** Session-based. Spring Session JDBC stores session data in PostgreSQL (`spring_session` / `spring_session_attributes` tables). Frontend sends `credentials: include` on every request. Login sets `HttpOnly; SameSite=None; Secure` cookie. After login, `LoginPage` pre-populates the `['me']` TanStack Query cache via `qc.setQueryData` so `ProtectedRoute` renders immediately without a second round-trip.
 
-**Audio flow:** Frontend requests presigned PUT URL from `/api/storage/upload-url` → uploads file directly to R2 → stores returned public URL in the DB field. Playback uses the public URL directly in `<audio>`.
+**Audio flow:** Frontend requests presigned PUT URL from `/api/storage/upload-url` → uploads file directly to R2 (bypassing backend) → stores returned public URL in the DB field. Playback uses the public URL directly in `<audio>`.
 
 ---
 
@@ -66,6 +73,7 @@ Carnatic music reference application. A personal vault to catalog Ragas, their A
 ```
 swara_vault/
 ├── CLAUDE.md                          ← this file
+├── vercel.json                        ← Vercel build + /api proxy rewrite (repo root)
 ├── project-scope.md                   ← original requirements
 │
 ├── backend/
@@ -114,11 +122,12 @@ swara_vault/
 │               └── V2__seed_melakarta.sql   72 Melakarta Ragas (Kanakangi → Rasikapriya)
 │
 └── frontend/
-    ├── vite.config.ts                 Tailwind v4 plugin + /api proxy → :8080
+    ├── vite.config.ts                 Tailwind v4 plugin + /api proxy → :8080 (dev only)
     ├── src/
     │   ├── main.tsx
     │   ├── App.tsx                    BrowserRouter + QueryClientProvider + all routes
-    │   ├── index.css                  @import "tailwindcss" only
+    │   ├── index.css                  @import "tailwindcss" + custom CSS (sv-card, btn-gold,
+    │   │                              sv-seek, note-bounce, shimmer-bar, float-note keyframes)
     │   ├── types/index.ts             Raga, Composition, Page<T>, CompositionType
     │   ├── api/
     │   │   ├── client.ts              Axios instance — baseURL=/api, withCredentials=true
@@ -126,16 +135,17 @@ swara_vault/
     │   │   ├── auth.ts                login, logout, register, getMe
     │   │   └── ragas.ts               searchRagas, getRaga, CRUD, compositions, upload, import
     │   ├── components/
-    │   │   ├── Layout.tsx             Top nav (Swara Vault | Ragas | + Add Raga | Import | Logout)
-    │   │   ├── AudioPlayer.tsx        Play/Pause button wrapping <audio>
-    │   │   ├── AudioUpload.tsx        File picker → presigned PUT → calls onUploaded(url)
-    │   │   └── CompositionSection.tsx Per-type accordion with inline add/edit/delete forms
+    │   │   ├── Layout.tsx             Top nav + fixed instrument emoji decorations (opacity 0.4)
+    │   │   ├── NoteSpinner.tsx        Musical note loading indicator (♩♪♫ bounce animation)
+    │   │   ├── AudioPlayer.tsx        Play/Pause + seek bar + time display + speed controls
+    │   │   ├── AudioUpload.tsx        File picker (no accept filter) → presigned PUT → onUploaded(url)
+    │   │   └── CompositionSection.tsx Per-type accordion with inline add/edit/delete + shimmer refresh
     │   └── pages/
-    │       ├── LoginPage.tsx
+    │       ├── LoginPage.tsx          Pre-populates ['me'] cache after login (no ProtectedRoute race)
     │       ├── RegisterPage.tsx
-    │       ├── RagaListPage.tsx       Search bar + Janya/Melakarta filter + paginated list
-    │       ├── RagaDetailPage.tsx     Full Raga view, clickable Janaka link, compositions
-    │       ├── RagaFormPage.tsx       Add + Edit (same component, isEdit = id !== 'new')
+    │       ├── RagaListPage.tsx       Search bar + Janya/Janaka filter + paginated list
+    │       ├── RagaDetailPage.tsx     Full Raga view, clickable Janaka link, inline delete confirm
+    │       ├── RagaFormPage.tsx       Add + Edit (isEdit = id !== 'new'); audio upload auto-saves
     │       └── ImportPage.tsx         Drag-and-drop CSV/JSON with format reference
 ```
 
@@ -163,7 +173,7 @@ composition     id, raga_id (FK → raga CASCADE DELETE),
 spring_session + spring_session_attributes   (managed by Spring Session JDBC)
 ```
 
-**Seeded data:** 72 Melakarta Ragas are inserted by `V2__seed_melakarta.sql` at startup. `is_seeded=true` rows cannot be deleted via the API.
+**Seeded data:** 72 Melakarta Ragas are inserted by `V2__seed_melakarta.sql` at startup. `is_seeded=true` is informational only — all ragas including seeded ones can be deleted via the API.
 
 ---
 
@@ -183,7 +193,7 @@ Ragas
   POST /api/ragas               { name, janya, janakaRagaId|melakarataNumber,
                                   arohana, arohanaAudioUrl, avarohana, avarohanaAudioUrl }
   PUT  /api/ragas/:id           same body as POST
-  DELETE /api/ragas/:id         403 if is_seeded=true
+  DELETE /api/ragas/:id         deletes any raga including seeded ones
 
 Compositions  (nested under a Raga)
   POST   /api/ragas/:id/compositions              { type, name, tala, description, audioUrl }
@@ -193,6 +203,7 @@ Compositions  (nested under a Raga)
 Storage
   POST /api/storage/upload-url  { ragaId, filename, contentType, compositionId? }
                                 → { uploadUrl (presigned PUT), publicUrl, fileKey }
+                                contentType must start with "audio/" or be a video/mpeg variant
 
 Import
   POST /api/import/ragas        multipart file (.csv or .json)
@@ -204,12 +215,16 @@ Import
 ## Key Design Decisions
 
 - **Melakarta range is 1–72** (not 1–76 as written in the original scope — standard Carnatic system).
-- **Seeded Melakarta Ragas cannot be deleted** (`is_seeded=true` guard in `RagaService.delete`).
+- **Seeded Melakarta Ragas can be deleted** — the `is_seeded` guard was removed from `RagaService.delete()`. The `is_seeded` flag remains in the DB and is shown as a badge in the UI, but it no longer blocks deletion.
 - **DTOs are Java records** with static factory methods (`RagaDto.from(entity)`, `RagaDto.summary(entity)`). Entities are never serialised directly to avoid circular JSON with the self-referencing `janakaRaga` FK.
-- **Audio upload is two-step:** frontend gets a presigned PUT URL from backend, uploads directly to R2 (bypassing backend), then saves the returned public URL back to the Raga/Composition via a normal PUT.
+- **Audio upload is two-step:** frontend gets a presigned PUT URL from backend, uploads directly to R2 (bypassing backend), then saves the returned public URL back to the Raga/Composition via a normal PUT. In Edit mode, audio upload auto-saves immediately without requiring a separate "Save changes" click.
+- **Audio type validation:** backend accepts any `audio/*` content type plus `video/mpeg`, `video/mpg`, `video/x-mpeg` (MPEG containers reported as video by some OSes). Frontend has no `accept` attribute on the file input (mobile Chrome compatibility) and only rejects files where `file.type` is positively identified as non-audio.
+- **Vercel API proxy:** `vercel.json` at repo root rewrites `/api/:path*` → Railway. All API calls are same-origin from the browser, making the session cookie first-party on `vercel.app`. This fixes Chrome for Android's third-party cookie blocking. `VITE_API_URL` is no longer used — `client.ts` always sets `baseURL: '/api'`.
 - **Tailwind v4** uses `@import "tailwindcss"` in CSS — there is no `tailwind.config.ts`.
 - **`RagaFormPage`** doubles as both Add and Edit: `id === 'new'` → create, otherwise → update.
-- **Session cookie** must be `SameSite=None; Secure` because Vercel (frontend) and Railway (backend) are on different domains. Axios must always send `withCredentials: true`.
+- **Session cookie** must be `SameSite=None; Secure` because the Railway backend origin differs from Vercel. Combined with the Vercel proxy, this ensures cookies work on all browsers including mobile Chrome.
+- **NoteSpinner** — reusable `<NoteSpinner>` component (♩♪♫ bounce) used on every button that triggers an API call.
+- **AudioPlayer** — enhanced with a draggable seek bar (`sv-seek` CSS class, gold fill), current/total time display, and speed selector (1× 1.25× 1.5× 2×).
 
 ---
 
@@ -228,11 +243,9 @@ Import
 | `PORT` | Set automatically by Railway |
 
 ### Frontend (Vercel)
-| Variable | Description |
-|---|---|
-| `VITE_API_URL` | Backend Railway URL — only needed for production build |
+No frontend environment variables are required. `VITE_API_URL` is no longer read by the code — all API calls go through the Vercel proxy rewrite in `vercel.json`.
 
-> In dev, Vite proxies `/api` → `http://localhost:8080` so no env var is needed locally.
+> In dev, Vite proxies `/api` → `http://localhost:8080` (configured in `vite.config.ts`).
 
 ---
 
@@ -270,7 +283,7 @@ cd backend && ./mvnw compile -q
 3. Set all backend env vars in Railway service settings
 4. Connect Railway service to GitHub repo (root: `backend/`) → deploy
 5. Flyway runs `V1` + `V2` on first startup — 72 Melakarta Ragas seeded automatically
-6. **Vercel** — import GitHub repo (root: `frontend/`) → set `VITE_API_URL` → deploy
+6. **Vercel** — import GitHub repo (repo root, not `frontend/`) → deploy (no env vars needed)
 7. Set `CORS_ALLOWED_ORIGINS` in Railway to the deployed Vercel URL
 
 ---
@@ -280,3 +293,4 @@ cd backend && ./mvnw compile -q
 - Audio uploads require the Raga to be saved first (the `ragaId` is needed for the R2 file key). The form shows a note about this on the "Add" page.
 - Seeded Melakarta Ragas have `arohana`/`avarohana` left blank — the user fills these in via Edit.
 - The `application.properties` file left by Spring Initializr is an empty placeholder — `application.yml` is the active config.
+- The Vercel `vercel.json` must be at the **repo root** (not inside `frontend/`) for the API proxy rewrite to work correctly.
