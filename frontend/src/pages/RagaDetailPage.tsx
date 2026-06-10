@@ -29,7 +29,6 @@ export default function RagaDetailPage() {
       navigate('/')
     } catch (err: any) {
       setDeleting(false)
-      setConfirmDelete(false)
       setDeleteError(err.response?.data?.message || 'Delete failed. Please try again.')
     }
   }
