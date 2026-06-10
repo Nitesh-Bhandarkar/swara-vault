@@ -34,3 +34,4 @@ Thumbs.db
 
 # Claude memory (local only)
 .claude/
+.vercel
