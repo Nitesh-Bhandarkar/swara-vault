@@ -4,7 +4,7 @@ import jakarta.validation.constraints.*;
 import java.util.UUID;
 
 public record RagaRequest(
-    @NotBlank String name,
+    @NotBlank @Size(max = 255) String name,
     @NotNull Boolean janya,
     UUID janakaRagaId,
     Integer melakarataNumber,

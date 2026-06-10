@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { searchRagas } from '../api/ragas'
@@ -7,14 +7,20 @@ import Layout from '../components/Layout'
 
 export default function RagaListPage() {
   const [q, setQ] = useState('')
+  const [debouncedQ, setDebouncedQ] = useState('')
   const [janyaFilter, setJanyaFilter] = useState<'all' | 'janya' | 'melakarta'>('all')
   const [page, setPage] = useState(0)
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQ(q), 300)
+    return () => clearTimeout(t)
+  }, [q])
 
   const janya = janyaFilter === 'all' ? undefined : janyaFilter === 'janya'
 
   const { data, isLoading } = useQuery({
-    queryKey: ['ragas', q, janya, page],
-    queryFn: () => searchRagas(q || undefined, janya, page).then(r => r.data),
+    queryKey: ['ragas', debouncedQ, janya, page],
+    queryFn: () => searchRagas(debouncedQ || undefined, janya, page).then(r => r.data),
     placeholderData: prev => prev,
   })
 

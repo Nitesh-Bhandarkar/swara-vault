@@ -8,6 +8,7 @@ import com.swara.vault.dto.RagaDto;
 import com.swara.vault.repository.RagaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStreamReader;
@@ -21,41 +22,61 @@ public class ImportService {
     private final RagaRepository ragaRepository;
     private final ObjectMapper objectMapper;
 
-    public List<RagaDto> importFile(MultipartFile file) throws Exception {
-        String filename = Objects.requireNonNull(file.getOriginalFilename()).toLowerCase();
-        if (filename.endsWith(".csv")) return importCsv(file);
-        if (filename.endsWith(".json")) return importJson(file);
+    public record ImportResult(List<RagaDto> imported, List<String> errors) {}
+
+    @Transactional
+    public ImportResult importFile(MultipartFile file) throws Exception {
+        String filename = file.getOriginalFilename();
+        if (filename == null || filename.isBlank()) {
+            throw new IllegalArgumentException("File has no name");
+        }
+        String lower = filename.toLowerCase();
+        if (lower.endsWith(".csv")) return importCsv(file);
+        if (lower.endsWith(".json")) return importJson(file);
         throw new IllegalArgumentException("Only CSV and JSON files are supported");
     }
 
-    private List<RagaDto> importCsv(MultipartFile file) throws Exception {
-        List<RagaDto> results = new ArrayList<>();
+    private ImportResult importCsv(MultipartFile file) throws Exception {
+        List<RagaDto> imported = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
         try (CSVReader reader = new CSVReader(new InputStreamReader(file.getInputStream()))) {
-            String[] header = reader.readNext(); // skip header row
-            if (header == null) return results;
+            String[] header = reader.readNext();
+            if (header == null) return new ImportResult(imported, errors);
             String[] row;
+            int rowNum = 1;
             while ((row = reader.readNext()) != null) {
+                rowNum++;
                 if (row.length < 2) continue;
-                RagaRequest req = parseCsvRow(row);
-                results.add(ragaService.create(req));
+                try {
+                    RagaRequest req = parseCsvRow(row);
+                    imported.add(ragaService.create(req));
+                } catch (Exception e) {
+                    errors.add("Row " + rowNum + ": " + e.getMessage());
+                }
             }
         }
-        return results;
+        return new ImportResult(imported, errors);
     }
 
-    private List<RagaDto> importJson(MultipartFile file) throws Exception {
+    private ImportResult importJson(MultipartFile file) throws Exception {
         List<Map<String, Object>> rows = objectMapper.readValue(
             file.getInputStream(), new TypeReference<>() {});
-        List<RagaDto> results = new ArrayList<>();
+        List<RagaDto> imported = new ArrayList<>();
+        List<String> errors = new ArrayList<>();
+        int rowNum = 0;
         for (Map<String, Object> row : rows) {
-            RagaRequest req = parseJsonRow(row);
-            results.add(ragaService.create(req));
+            rowNum++;
+            try {
+                RagaRequest req = parseJsonRow(row);
+                imported.add(ragaService.create(req));
+            } catch (Exception e) {
+                errors.add("Entry " + rowNum + ": " + e.getMessage());
+            }
         }
-        return results;
+        return new ImportResult(imported, errors);
     }
 
     private RagaRequest parseCsvRow(String[] row) {
-        // CSV columns: name, janya, janaka_name, melakarta_number, arohana, avarohana
         String name = row[0].trim();
         boolean janya = "true".equalsIgnoreCase(row[1].trim());
         UUID janakaId = null;

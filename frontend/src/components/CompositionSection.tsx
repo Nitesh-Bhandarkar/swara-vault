@@ -28,6 +28,7 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<Omit<Composition, 'id'>>(empty(type))
   const [open, setOpen] = useState(true)
+  const [saveError, setSaveError] = useState('')
 
   const items = compositions.filter(c => c.type === type)
   const colors = TYPE_COLORS[type]
@@ -42,10 +43,15 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
 
   const handleSave = async () => {
     if (!form.name || !form.tala) return
-    if (editingId) await updateComposition(ragaId, editingId, form)
-    else await addComposition(ragaId, form)
-    resetForm()
-    onChanged()
+    setSaveError('')
+    try {
+      if (editingId) await updateComposition(ragaId, editingId, form)
+      else await addComposition(ragaId, form)
+      resetForm()
+      onChanged()
+    } catch (err: any) {
+      setSaveError(err.response?.data?.message || 'Save failed. Try again.')
+    }
   }
 
   const handleDelete = async (id: string) => {
@@ -137,6 +143,7 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
                   <AudioUpload ragaId={ragaId} compositionId={editingId ?? undefined} existingUrl={form.audioUrl} onUploaded={url => setForm(f => ({ ...f, audioUrl: url }))} label="audio" />
                 </div>
               )}
+              {saveError && <p style={{ color: '#FCA5A5', fontSize: '0.8rem', marginBottom: '0.5rem' }}>{saveError}</p>}
               <div style={{ display: 'flex', gap: '0.6rem' }}>
                 <button onClick={handleSave} className="btn-gold" style={{ fontSize: '0.85rem', padding: '0.45rem 1.1rem' }}>Save</button>
                 <button onClick={resetForm} className="btn-outline" style={{ fontSize: '0.85rem', padding: '0.45rem 1.1rem' }}>Cancel</button>

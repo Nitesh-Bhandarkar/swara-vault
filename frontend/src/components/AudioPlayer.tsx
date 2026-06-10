@@ -38,7 +38,7 @@ export default function AudioPlayer({ url, label }: Props) {
         <span style={{ fontSize: '1rem' }}>{playing ? '⏸' : '▶'}</span>
         {playing ? 'Pause' : 'Play'}
       </button>
-      <audio ref={audioRef} src={url} onEnded={() => setPlaying(false)} onPause={() => setPlaying(false)} />
+      <audio ref={audioRef} src={url} onEnded={() => setPlaying(false)} onPause={() => setPlaying(false)} onError={() => setPlaying(false)} />
     </div>
   )
 }

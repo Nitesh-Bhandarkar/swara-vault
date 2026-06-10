@@ -18,8 +18,13 @@ export default function RagaDetailPage() {
   const handleDelete = async () => {
     if (!raga || raga.seeded) return
     if (!confirm(`Delete "${raga.name}"? This cannot be undone.`)) return
-    await deleteRaga(id!)
-    navigate('/')
+    try {
+      await deleteRaga(id!)
+      qc.invalidateQueries({ queryKey: ['ragas'] })
+      navigate('/')
+    } catch (err: any) {
+      alert(err.response?.data?.message || 'Delete failed. Please try again.')
+    }
   }
 
   const refresh = () => qc.invalidateQueries({ queryKey: ['raga', id] })

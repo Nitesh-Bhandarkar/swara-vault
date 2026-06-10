@@ -18,7 +18,13 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     queryFn: () => getMe().then(r => r.data),
   })
 
-  if (isLoading) return null
+  if (isLoading) return (
+    <div style={{ minHeight: '100vh', background: '#0D0A1A', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(201,168,76,0.6)', fontSize: '2rem', gap: '0.5rem' }}>
+      <span className="note-float">♩</span>
+      <span className="note-float-2">♪</span>
+      <span className="note-float-3">♫</span>
+    </div>
+  )
   if (isError || !data) return <Navigate to="/login" replace />
   return <>{children}</>
 }

@@ -18,6 +18,7 @@ export default function AudioUpload({ ragaId, compositionId, existingUrl, onUplo
     const file = e.target.files?.[0]
     if (!file) return
     if (!file.type.startsWith('audio/')) { setError('Only audio files accepted'); return }
+    if (file.size > 50 * 1024 * 1024) { setError('File too large (max 50 MB)'); return }
     setUploading(true); setError('')
     try {
       const { data } = await getUploadUrl(ragaId, file.name, file.type, compositionId)

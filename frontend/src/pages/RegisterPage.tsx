@@ -4,12 +4,16 @@ import { register } from '../api/auth'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
-  const [form, setForm] = useState({ username: '', email: '', password: '' })
+  const [form, setForm] = useState({ username: '', email: '', password: '', confirmPassword: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (form.password !== form.confirmPassword) {
+      setError('Passwords do not match')
+      return
+    }
     setLoading(true)
     setError('')
     try {
@@ -62,14 +66,16 @@ export default function RegisterPage() {
             Create account
           </h2>
           <form onSubmit={handleSubmit}>
-            {(['username','email','password'] as const).map((field) => (
+            {(['username', 'email', 'password', 'confirmPassword'] as const).map((field) => (
               <div key={field} className="mb-4">
                 <label style={{ display: 'block', color: 'rgba(201,168,76,0.8)', fontSize: '0.8rem', fontWeight: 500, marginBottom: '0.4rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
-                  {field.charAt(0).toUpperCase() + field.slice(1)}
+                  {field === 'confirmPassword' ? 'Confirm Password' : field.charAt(0).toUpperCase() + field.slice(1)}
                 </label>
                 <input
-                  type={field === 'password' ? 'password' : field === 'email' ? 'email' : 'text'}
-                  required minLength={field === 'password' ? 8 : field === 'username' ? 3 : 0}
+                  type={field === 'password' || field === 'confirmPassword' ? 'password' : field === 'email' ? 'email' : 'text'}
+                  required
+                  minLength={field === 'password' || field === 'confirmPassword' ? 8 : field === 'username' ? 3 : 0}
+                  maxLength={field === 'username' ? 50 : undefined}
                   autoFocus={field === 'username'}
                   className="sv-input"
                   style={{ background: 'rgba(255,255,255,0.07)', color: '#fff', borderColor: 'rgba(201,168,76,0.2)' }}

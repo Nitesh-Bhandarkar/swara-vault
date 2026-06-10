@@ -3,6 +3,8 @@ package com.swara.vault.service;
 import com.swara.vault.dto.RagaDto;
 import com.swara.vault.dto.RagaRequest;
 import com.swara.vault.entity.Raga;
+import com.swara.vault.exception.ForbiddenOperationException;
+import com.swara.vault.exception.ResourceNotFoundException;
 import com.swara.vault.repository.RagaRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
@@ -39,7 +41,7 @@ public class RagaService {
     public RagaDto getById(UUID id) {
         return ragaRepository.findById(id)
             .map(RagaDto::from)
-            .orElseThrow(() -> new IllegalArgumentException("Raga not found: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Raga not found: " + id));
     }
 
     public List<RagaDto> getMelakarataRagas() {
@@ -57,7 +59,7 @@ public class RagaService {
     @Transactional
     public RagaDto update(UUID id, RagaRequest req) {
         Raga raga = ragaRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Raga not found: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Raga not found: " + id));
         validate(req, id);
         return RagaDto.from(ragaRepository.save(buildRaga(raga, req)));
     }
@@ -65,9 +67,9 @@ public class RagaService {
     @Transactional
     public void delete(UUID id) {
         Raga raga = ragaRepository.findById(id)
-            .orElseThrow(() -> new IllegalArgumentException("Raga not found: " + id));
+            .orElseThrow(() -> new ResourceNotFoundException("Raga not found: " + id));
         if (raga.isSeeded()) {
-            throw new IllegalArgumentException("Cannot delete a seeded Melakarta Raga");
+            throw new ForbiddenOperationException("Cannot delete a seeded Melakarta Raga");
         }
         ragaRepository.delete(raga);
     }
@@ -96,7 +98,7 @@ public class RagaService {
         raga.setAvarohanaAudioUrl(req.avarohanaAudioUrl());
         if (req.janya()) {
             Raga janaka = ragaRepository.findById(req.janakaRagaId())
-                .orElseThrow(() -> new IllegalArgumentException("Janaka Raga not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Janaka Raga not found"));
             raga.setJanakaRaga(janaka);
             raga.setMelakarataNumber(null);
         } else {

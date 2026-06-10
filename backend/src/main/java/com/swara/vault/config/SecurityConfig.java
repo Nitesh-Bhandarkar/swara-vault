@@ -38,6 +38,7 @@ public class SecurityConfig {
         http
             .cors(Customizer.withDefaults())
             .csrf(AbstractHttpConfigurer::disable)
+            .sessionManagement(sm -> sm.sessionFixation().changeSessionId())
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/auth/**", "/error").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/ragas/**").authenticated()

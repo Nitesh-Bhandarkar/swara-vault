@@ -10,6 +10,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequ
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.time.Duration;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -23,7 +24,15 @@ public class StorageService {
     @Value("${storage.s3.public-url}")
     private String publicUrl;
 
+    private static final List<String> ALLOWED_AUDIO_TYPES = List.of(
+        "audio/mpeg", "audio/mp4", "audio/wav", "audio/ogg",
+        "audio/webm", "audio/flac", "audio/aac", "audio/x-m4a"
+    );
+
     public UploadUrlResponse generateUploadUrl(UploadUrlRequest req) {
+        if (ALLOWED_AUDIO_TYPES.stream().noneMatch(req.contentType()::equalsIgnoreCase)) {
+            throw new IllegalArgumentException("Content type not permitted: " + req.contentType());
+        }
         String fileKey = buildFileKey(req);
 
         PutObjectRequest putRequest = PutObjectRequest.builder()

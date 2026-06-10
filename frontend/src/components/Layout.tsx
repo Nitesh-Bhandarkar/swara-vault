@@ -1,4 +1,5 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { logout } from '../api/auth'
 
 const NAV_LINKS = [
@@ -9,9 +10,11 @@ const NAV_LINKS = [
 export default function Layout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
+  const qc = useQueryClient()
 
   const handleLogout = async () => {
     await logout()
+    qc.clear()
     navigate('/login')
   }
 
