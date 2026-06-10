@@ -134,6 +134,18 @@ h1, h2, h3 { font-family: var(--font-display); }
   background: linear-gradient(to right, transparent, rgba(201,168,76,0.3), transparent);
 }
 
+/* Note bounce — used by NoteSpinner */
+@keyframes note-bounce {
+  0%, 55%, 100% { transform: translateY(0px); opacity: 0.35; }
+  28%            { transform: translateY(-6px); opacity: 1; }
+}
+
+/* Shimmer bar — used by CompositionSection while refreshing */
+@keyframes shimmer-bar {
+  0%   { background-position: -200% center; }
+  100% { background-position:  200% center; }
+}
+
 /* Floating notes */
 @keyframes float-note {
   0%   { transform: translateY(0px) rotate(-5deg); opacity: 0.6; }

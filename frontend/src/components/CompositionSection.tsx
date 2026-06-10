@@ -1,7 +1,8 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Composition, CompositionType } from '../types'
 import AudioPlayer from './AudioPlayer'
 import AudioUpload from './AudioUpload'
+import NoteSpinner from './NoteSpinner'
 import { addComposition, updateComposition, deleteComposition } from '../api/ragas'
 
 interface Props {
@@ -30,6 +31,13 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
   const [open, setOpen] = useState(true)
   const [saveError, setSaveError] = useState('')
   const [fieldErrors, setFieldErrors] = useState({ name: false, tala: false })
+  const [saving, setSaving] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  // Clear refreshing indicator when parent passes updated compositions back
+  useEffect(() => { setRefreshing(false) }, [compositions])
 
   const items = compositions.filter(c => c.type === type)
   const colors = TYPE_COLORS[type]
@@ -52,26 +60,35 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
 
   const handleSave = async () => {
     const errors = { name: !form.name.trim(), tala: !form.tala.trim() }
-    if (errors.name || errors.tala) {
-      setFieldErrors(errors)
-      return
-    }
+    if (errors.name || errors.tala) { setFieldErrors(errors); return }
     setFieldErrors({ name: false, tala: false })
     setSaveError('')
+    setSaving(true)
     try {
       if (editingId) await updateComposition(ragaId, editingId, form)
       else await addComposition(ragaId, form)
       resetForm()
+      setRefreshing(true)
       onChanged()
     } catch (err: any) {
       setSaveError(err.response?.data?.message || 'Save failed. Try again.')
+    } finally {
+      setSaving(false)
     }
   }
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Delete this composition?')) return
-    await deleteComposition(ragaId, id)
-    onChanged()
+    setDeletingId(id)
+    try {
+      await deleteComposition(ragaId, id)
+      setConfirmDeleteId(null)
+      setRefreshing(true)
+      onChanged()
+    } catch {
+      // leave confirm open so user can retry
+    } finally {
+      setDeletingId(null)
+    }
   }
 
   const showForm = adding || editingId !== null
@@ -119,6 +136,18 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
 
       {open && (
         <div className="mt-3">
+          {/* Shimmer bar while list is refreshing after a save/delete */}
+          {refreshing && (
+            <div style={{
+              height: '2px',
+              borderRadius: '2px',
+              marginBottom: '0.5rem',
+              background: 'linear-gradient(90deg, transparent 0%, #C9A84C 40%, #E8C96A 50%, #C9A84C 60%, transparent 100%)',
+              backgroundSize: '200% auto',
+              animation: 'shimmer-bar 1.2s linear infinite',
+            }} />
+          )}
+
           {items.length === 0 && !showForm && (
             <p style={{ color: 'rgba(240,228,200,0.3)', fontSize: '0.85rem', fontStyle: 'italic', paddingLeft: '1rem', margin: '0.5rem 0 1rem' }}>
               No {title.toLowerCase()} added yet.
@@ -128,15 +157,41 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', marginBottom: showForm ? '1rem' : 0 }}>
             {items.map(c => (
               <div key={c.id} style={{ background: colors.bg, border: `1px solid ${colors.border}`, borderRadius: '0.75rem', padding: '1rem 1.1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                <div>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <p style={{ fontWeight: 600, color: '#F0E4C8', margin: '0 0 0.2rem', fontSize: '0.95rem', fontFamily: 'var(--font-display)' }}>{c.name}</p>
                   <p style={{ fontSize: '0.78rem', color: colors.text, margin: '0 0 0.35rem', fontWeight: 500 }}>Tala: {c.tala}</p>
                   {c.description && <p style={{ fontSize: '0.82rem', color: 'rgba(240,228,200,0.55)', margin: '0 0 0.5rem' }}>{c.description}</p>}
                   {c.audioUrl && <AudioPlayer url={c.audioUrl} />}
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem', marginLeft: '1rem', flexShrink: 0 }}>
-                  <button onClick={() => startEdit(c)} style={{ fontSize: '0.75rem', color: 'rgba(240,228,200,0.45)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Edit</button>
-                  <button onClick={() => handleDelete(c.id)} style={{ fontSize: '0.75rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Delete</button>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.4rem', marginLeft: '1rem', flexShrink: 0 }}>
+                  {confirmDeleteId === c.id ? (
+                    <>
+                      <span style={{ fontSize: '0.72rem', color: 'rgba(252,165,165,0.85)', whiteSpace: 'nowrap' }}>Delete?</span>
+                      <div style={{ display: 'flex', gap: '0.35rem' }}>
+                        <button
+                          type="button"
+                          onClick={() => handleDelete(c.id)}
+                          disabled={deletingId === c.id}
+                          style={{ fontSize: '0.72rem', padding: '0.2rem 0.6rem', background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.45)', color: '#fca5a5', borderRadius: '0.35rem', cursor: deletingId === c.id ? 'not-allowed' : 'pointer', minWidth: '54px' }}
+                        >
+                          {deletingId === c.id ? <NoteSpinner color="#fca5a5" /> : 'Yes'}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setConfirmDeleteId(null)}
+                          disabled={!!deletingId}
+                          style={{ fontSize: '0.72rem', padding: '0.2rem 0.55rem', background: 'transparent', border: '1px solid rgba(201,168,76,0.2)', color: 'rgba(201,168,76,0.6)', borderRadius: '0.35rem', cursor: 'pointer' }}
+                        >
+                          No
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button onClick={() => startEdit(c)} style={{ fontSize: '0.75rem', color: 'rgba(240,228,200,0.45)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Edit</button>
+                      <button onClick={() => setConfirmDeleteId(c.id)} style={{ fontSize: '0.75rem', color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Delete</button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -181,8 +236,16 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
               )}
               {saveError && <p style={{ color: '#FCA5A5', fontSize: '0.8rem', marginBottom: '0.5rem' }}>{saveError}</p>}
               <div style={{ display: 'flex', gap: '0.6rem' }}>
-                <button type="button" onClick={handleSave} className="btn-gold" style={{ fontSize: '0.85rem', padding: '0.45rem 1.1rem' }}>Save</button>
-                <button type="button" onClick={resetForm} className="btn-outline" style={{ fontSize: '0.85rem', padding: '0.45rem 1.1rem' }}>Cancel</button>
+                <button
+                  type="button"
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="btn-gold"
+                  style={{ fontSize: '0.85rem', padding: '0.45rem 1.1rem', minWidth: '80px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                >
+                  {saving ? <><NoteSpinner /> Saving…</> : 'Save'}
+                </button>
+                <button type="button" onClick={resetForm} disabled={saving} className="btn-outline" style={{ fontSize: '0.85rem', padding: '0.45rem 1.1rem' }}>Cancel</button>
               </div>
             </div>
           )}

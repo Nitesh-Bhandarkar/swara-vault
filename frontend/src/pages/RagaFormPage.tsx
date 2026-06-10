@@ -5,6 +5,7 @@ import { createRaga, updateRaga, getRaga, getMelakarataRagas } from '../api/raga
 import type { Raga } from '../types'
 import Layout from '../components/Layout'
 import AudioUpload from '../components/AudioUpload'
+import NoteSpinner from '../components/NoteSpinner'
 
 interface FormState {
   name: string; janya: boolean; janakaRagaId: string
@@ -24,6 +25,7 @@ export default function RagaFormPage() {
   const [form, setForm] = useState<FormState>(emptyForm())
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [finishing, setFinishing] = useState(false)
   // After a new raga is created, hold its ID so we can show audio upload before navigating
   const [createdId, setCreatedId] = useState<string | null>(null)
   const [createdForm, setCreatedForm] = useState<{ arohanaAudioUrl: string; avarohanaAudioUrl: string }>({ arohanaAudioUrl: '', avarohanaAudioUrl: '' })
@@ -74,6 +76,7 @@ export default function RagaFormPage() {
 
   const handleFinishCreate = async () => {
     if (!createdId) return
+    setFinishing(true)
     if (createdForm.arohanaAudioUrl || createdForm.avarohanaAudioUrl) {
       try {
         // Must send the full RagaRequest payload — backend requires name + janya
@@ -89,6 +92,7 @@ export default function RagaFormPage() {
         })
       } catch { /* non-blocking */ }
     }
+    setFinishing(false)
     navigate(`/ragas/${createdId}`)
   }
 
@@ -159,10 +163,10 @@ export default function RagaFormPage() {
             </div>
           </div>
           <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button onClick={handleFinishCreate} className="btn-gold" style={{ padding: '0.7rem 2rem', fontSize: '0.95rem' }}>
-              Done →
+            <button onClick={handleFinishCreate} disabled={finishing} className="btn-gold" style={{ padding: '0.7rem 2rem', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {finishing ? <><NoteSpinner /> Saving…</> : 'Done →'}
             </button>
-            <button onClick={() => navigate(`/ragas/${createdId}`)} className="btn-outline" style={{ padding: '0.7rem 1.5rem', fontSize: '0.95rem' }}>
+            <button onClick={() => navigate(`/ragas/${createdId}`)} disabled={finishing} className="btn-outline" style={{ padding: '0.7rem 1.5rem', fontSize: '0.95rem' }}>
               Skip
             </button>
           </div>
@@ -245,8 +249,8 @@ export default function RagaFormPage() {
           )}
 
           <div style={{ display: 'flex', gap: '0.75rem' }}>
-            <button type="submit" disabled={saving} className="btn-gold" style={{ padding: '0.7rem 2rem', fontSize: '0.95rem' }}>
-              {saving ? '♩ Saving…' : isEdit ? 'Save changes' : 'Add Raga'}
+            <button type="submit" disabled={saving} className="btn-gold" style={{ padding: '0.7rem 2rem', fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              {saving ? <><NoteSpinner /> Saving…</> : isEdit ? 'Save changes' : 'Add Raga'}
             </button>
             <Link to={isEdit ? `/ragas/${id}` : '/'} className="btn-outline" style={{ padding: '0.7rem 1.5rem', fontSize: '0.95rem', textDecoration: 'none' }}>
               Cancel

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { login } from '../api/auth'
+import NoteSpinner from '../components/NoteSpinner'
 
 export default function LoginPage() {
   const navigate = useNavigate()
@@ -114,8 +115,8 @@ export default function LoginPage() {
                 {error}
               </p>
             )}
-            <button type="submit" disabled={loading} className="btn-gold" style={{ width: '100%', padding: '0.75rem', fontSize: '0.95rem' }}>
-              {loading ? '♩ Signing in…' : 'Sign in'}
+            <button type="submit" disabled={loading} className="btn-gold" style={{ width: '100%', padding: '0.75rem', fontSize: '0.95rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+              {loading ? <><NoteSpinner /> Signing in…</> : 'Sign in'}
             </button>
           </form>
 

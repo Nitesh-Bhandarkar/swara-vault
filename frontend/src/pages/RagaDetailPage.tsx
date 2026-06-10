@@ -5,6 +5,7 @@ import { getRaga, deleteRaga } from '../api/ragas'
 import Layout from '../components/Layout'
 import AudioPlayer from '../components/AudioPlayer'
 import CompositionSection from '../components/CompositionSection'
+import NoteSpinner from '../components/NoteSpinner'
 
 export default function RagaDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -140,9 +141,10 @@ export default function RagaDetailPage() {
                     color: '#fca5a5', borderRadius: '0.5rem',
                     cursor: deleting ? 'not-allowed' : 'pointer', fontWeight: 600,
                     opacity: deleting ? 0.6 : 1,
+                    display: 'flex', alignItems: 'center', gap: '0.4rem',
                   }}
                 >
-                  {deleting ? 'Deleting…' : 'Yes, delete'}
+                  {deleting ? <><NoteSpinner color="#fca5a5" /> Deleting…</> : 'Yes, delete'}
                 </button>
                 <button
                   type="button"

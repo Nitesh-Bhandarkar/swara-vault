@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { register } from '../api/auth'
+import NoteSpinner from '../components/NoteSpinner'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
@@ -85,8 +86,8 @@ export default function RegisterPage() {
               </div>
             ))}
             {error && <p style={{ color: '#FCA5A5', fontSize: '0.85rem', marginBottom: '1rem', textAlign: 'center' }}>{error}</p>}
-            <button type="submit" disabled={loading} className="btn-gold" style={{ width: '100%', padding: '0.75rem', fontSize: '0.95rem', marginTop: '0.25rem' }}>
-              {loading ? '♩ Creating…' : 'Create account'}
+            <button type="submit" disabled={loading} className="btn-gold" style={{ width: '100%', padding: '0.75rem', fontSize: '0.95rem', marginTop: '0.25rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}>
+              {loading ? <><NoteSpinner /> Creating account…</> : 'Create account'}
             </button>
           </form>
           <p style={{ textAlign: 'center', marginTop: '1.25rem', color: 'rgba(201,168,76,0.45)', fontSize: '0.85rem' }}>

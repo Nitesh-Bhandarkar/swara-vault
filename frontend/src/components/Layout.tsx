@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { logout } from '../api/auth'
+import NoteSpinner from './NoteSpinner'
 
 const NAV_LINKS = [
   { to: '/', label: 'Ragas' },
@@ -11,8 +13,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
   const navigate = useNavigate()
   const location = useLocation()
   const qc = useQueryClient()
+  const [loggingOut, setLoggingOut] = useState(false)
 
   const handleLogout = async () => {
+    setLoggingOut(true)
     await logout()
     qc.clear()
     navigate('/login')
@@ -135,20 +139,22 @@ export default function Layout({ children }: { children: React.ReactNode }) {
             </Link>
             <button
               onClick={handleLogout}
+              disabled={loggingOut}
               style={{
                 color: 'rgba(201,168,76,0.45)',
                 fontSize: '0.8rem',
                 background: 'transparent',
                 border: 'none',
-                cursor: 'pointer',
+                cursor: loggingOut ? 'not-allowed' : 'pointer',
                 padding: '0.4rem 0.6rem',
                 letterSpacing: '0.02em',
                 transition: 'color 0.2s',
+                display: 'flex', alignItems: 'center', gap: '0.3rem',
               }}
-              onMouseOver={e => (e.currentTarget.style.color = 'rgba(201,168,76,0.85)')}
+              onMouseOver={e => { if (!loggingOut) e.currentTarget.style.color = 'rgba(201,168,76,0.85)' }}
               onMouseOut={e => (e.currentTarget.style.color = 'rgba(201,168,76,0.45)')}
             >
-              Logout
+              {loggingOut ? <NoteSpinner color="rgba(201,168,76,0.6)" /> : 'Logout'}
             </button>
           </nav>
         </div>
