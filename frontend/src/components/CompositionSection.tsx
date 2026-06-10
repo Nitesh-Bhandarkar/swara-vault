@@ -29,20 +29,34 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
   const [form, setForm] = useState<Omit<Composition, 'id'>>(empty(type))
   const [open, setOpen] = useState(true)
   const [saveError, setSaveError] = useState('')
+  const [fieldErrors, setFieldErrors] = useState({ name: false, tala: false })
 
   const items = compositions.filter(c => c.type === type)
   const colors = TYPE_COLORS[type]
 
-  const resetForm = () => { setForm(empty(type)); setAdding(false); setEditingId(null) }
+  const resetForm = () => {
+    setForm(empty(type))
+    setAdding(false)
+    setEditingId(null)
+    setSaveError('')
+    setFieldErrors({ name: false, tala: false })
+  }
 
   const startEdit = (c: Composition) => {
     setForm({ type: c.type, name: c.name, tala: c.tala, description: c.description, audioUrl: c.audioUrl })
     setEditingId(c.id)
     setAdding(false)
+    setSaveError('')
+    setFieldErrors({ name: false, tala: false })
   }
 
   const handleSave = async () => {
-    if (!form.name || !form.tala) return
+    const errors = { name: !form.name.trim(), tala: !form.tala.trim() }
+    if (errors.name || errors.tala) {
+      setFieldErrors(errors)
+      return
+    }
+    setFieldErrors({ name: false, tala: false })
     setSaveError('')
     try {
       if (editingId) await updateComposition(ragaId, editingId, form)
@@ -61,6 +75,12 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
   }
 
   const showForm = adding || editingId !== null
+
+  const inputStyle = (hasError: boolean) => ({
+    fontSize: '0.875rem',
+    borderColor: hasError ? '#ef4444' : undefined,
+    boxShadow: hasError ? '0 0 0 1px #ef4444' : undefined,
+  })
 
   return (
     <div className="mb-5">
@@ -126,12 +146,28 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
             <div style={{ background: 'rgba(255,255,255,0.03)', border: `1.5px solid ${colors.border}`, borderRadius: '0.75rem', padding: '1.1rem', marginTop: '0.5rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', marginBottom: '0.75rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'rgba(201,168,76,0.65)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem' }}>Name *</label>
-                  <input className="sv-input" style={{ fontSize: '0.875rem' }} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: fieldErrors.name ? '#ef4444' : 'rgba(201,168,76,0.65)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem' }}>
+                    Name *
+                  </label>
+                  <input
+                    className="sv-input"
+                    style={inputStyle(fieldErrors.name)}
+                    value={form.name}
+                    onChange={e => { setForm(f => ({ ...f, name: e.target.value })); setFieldErrors(fe => ({ ...fe, name: false })) }}
+                  />
+                  {fieldErrors.name && <p style={{ color: '#ef4444', fontSize: '0.72rem', margin: '0.25rem 0 0' }}>Name is required</p>}
                 </div>
                 <div>
-                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'rgba(201,168,76,0.65)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem' }}>Tala *</label>
-                  <input className="sv-input" style={{ fontSize: '0.875rem' }} value={form.tala} onChange={e => setForm(f => ({ ...f, tala: e.target.value }))} />
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: fieldErrors.tala ? '#ef4444' : 'rgba(201,168,76,0.65)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.3rem' }}>
+                    Tala *
+                  </label>
+                  <input
+                    className="sv-input"
+                    style={inputStyle(fieldErrors.tala)}
+                    value={form.tala}
+                    onChange={e => { setForm(f => ({ ...f, tala: e.target.value })); setFieldErrors(fe => ({ ...fe, tala: false })) }}
+                  />
+                  {fieldErrors.tala && <p style={{ color: '#ef4444', fontSize: '0.72rem', margin: '0.25rem 0 0' }}>Tala is required</p>}
                 </div>
               </div>
               <div style={{ marginBottom: '0.75rem' }}>
@@ -145,8 +181,8 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
               )}
               {saveError && <p style={{ color: '#FCA5A5', fontSize: '0.8rem', marginBottom: '0.5rem' }}>{saveError}</p>}
               <div style={{ display: 'flex', gap: '0.6rem' }}>
-                <button onClick={handleSave} className="btn-gold" style={{ fontSize: '0.85rem', padding: '0.45rem 1.1rem' }}>Save</button>
-                <button onClick={resetForm} className="btn-outline" style={{ fontSize: '0.85rem', padding: '0.45rem 1.1rem' }}>Cancel</button>
+                <button type="button" onClick={handleSave} className="btn-gold" style={{ fontSize: '0.85rem', padding: '0.45rem 1.1rem' }}>Save</button>
+                <button type="button" onClick={resetForm} className="btn-outline" style={{ fontSize: '0.85rem', padding: '0.45rem 1.1rem' }}>Cancel</button>
               </div>
             </div>
           )}

@@ -42,7 +42,6 @@ export default function RagaDetailPage() {
 
   return (
     <Layout>
-      {/* Back */}
       <Link to="/" style={{ color: 'rgba(201,168,76,0.7)', fontSize: '0.85rem', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.3rem', marginBottom: '1.5rem' }}>
         ← All Ragas
       </Link>
@@ -58,7 +57,6 @@ export default function RagaDetailPage() {
           overflow: 'hidden',
         }}
       >
-        {/* Decorative notes */}
         <div className="absolute right-8 top-4 hidden md:flex gap-5 opacity-20">
           <span className="note-float" style={{ color: '#E8C96A', fontSize: '2.5rem', fontFamily: 'serif' }}>𝄞</span>
           <span className="note-float-2" style={{ color: '#E8C96A', fontSize: '1.8rem', fontFamily: 'serif' }}>♫</span>
@@ -68,7 +66,7 @@ export default function RagaDetailPage() {
         <div className="flex items-start justify-between">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <span className={raga.janya ? 'badge-janya' : 'badge-mela'}>{raga.janya ? 'Janya' : 'Melakarta'}</span>
+              <span className={raga.janya ? 'badge-janya' : 'badge-mela'}>{raga.janya ? 'Janya' : 'Janaka'}</span>
               {!raga.janya && <span style={{ color: 'rgba(201,168,76,0.6)', fontSize: '0.85rem' }}>Mela #{raga.melakarataNumber}</span>}
               {raga.seeded && <span style={{ color: 'rgba(201,168,76,0.4)', fontSize: '0.75rem', border: '1px solid rgba(201,168,76,0.2)', borderRadius: '999px', padding: '0.1rem 0.5rem' }}>Seeded</span>}
             </div>
@@ -77,7 +75,7 @@ export default function RagaDetailPage() {
             </h1>
             {raga.janya && raga.janakaRagaId && (
               <p style={{ color: 'rgba(201,168,76,0.6)', fontSize: '0.9rem', margin: 0 }}>
-                Janya of{' '}
+                Janaka:{' '}
                 <Link to={`/ragas/${raga.janakaRagaId}`} style={{ color: '#E8C96A', fontWeight: 600, textDecoration: 'none' }}>
                   {raga.janakaRagaName} →
                 </Link>
@@ -88,8 +86,18 @@ export default function RagaDetailPage() {
             <Link to={`/ragas/${id}/edit`} className="btn-outline" style={{ fontSize: '0.85rem', padding: '0.45rem 1rem', textDecoration: 'none' }}>
               Edit
             </Link>
-            {!raga.seeded && (
-              <button onClick={handleDelete} style={{ fontSize: '0.85rem', padding: '0.45rem 1rem', background: 'transparent', border: '1.5px solid rgba(239,68,68,0.35)', color: 'rgba(252,165,165,0.8)', borderRadius: '0.5rem', cursor: 'pointer', transition: 'all 0.2s' }}>
+            {raga.seeded ? (
+              <span
+                title="Seeded ragas cannot be deleted"
+                style={{ fontSize: '0.85rem', padding: '0.45rem 1rem', background: 'transparent', border: '1.5px solid rgba(239,68,68,0.15)', color: 'rgba(252,165,165,0.3)', borderRadius: '0.5rem', cursor: 'not-allowed' }}
+              >
+                Delete
+              </span>
+            ) : (
+              <button
+                onClick={handleDelete}
+                style={{ fontSize: '0.85rem', padding: '0.45rem 1rem', background: 'transparent', border: '1.5px solid rgba(239,68,68,0.35)', color: 'rgba(252,165,165,0.8)', borderRadius: '0.5rem', cursor: 'pointer', transition: 'all 0.2s' }}
+              >
                 Delete
               </button>
             )}
@@ -102,18 +110,14 @@ export default function RagaDetailPage() {
         <div className="ornament mb-5"><span style={{ fontSize: '0.85rem', letterSpacing: '0.2em', color: 'rgba(201,168,76,0.6)', textTransform: 'uppercase', fontWeight: 500, fontFamily: 'var(--font-body)' }}>Swaras</span></div>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div>
-            <p style={{ color: 'rgba(201,168,76,0.7)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600, marginBottom: '0.5rem' }}>
-              ↑ Arohana
-            </p>
+            <p style={{ color: 'rgba(201,168,76,0.7)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600, marginBottom: '0.5rem' }}>↑ Arohana</p>
             <p style={{ fontFamily: 'monospace', fontSize: '1.1rem', color: raga.arohana ? '#E8C96A' : 'rgba(240,228,200,0.3)', fontStyle: raga.arohana ? 'normal' : 'italic', marginBottom: '0.75rem', letterSpacing: '0.05em' }}>
               {raga.arohana || 'Not set yet'}
             </p>
             {raga.arohanaAudioUrl && <AudioPlayer url={raga.arohanaAudioUrl} />}
           </div>
           <div>
-            <p style={{ color: 'rgba(201,168,76,0.7)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600, marginBottom: '0.5rem' }}>
-              ↓ Avarohana
-            </p>
+            <p style={{ color: 'rgba(201,168,76,0.7)', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.12em', fontWeight: 600, marginBottom: '0.5rem' }}>↓ Avarohana</p>
             <p style={{ fontFamily: 'monospace', fontSize: '1.1rem', color: raga.avarohana ? '#E8C96A' : 'rgba(240,228,200,0.3)', fontStyle: raga.avarohana ? 'normal' : 'italic', marginBottom: '0.75rem', letterSpacing: '0.05em' }}>
               {raga.avarohana || 'Not set yet'}
             </p>
@@ -122,14 +126,14 @@ export default function RagaDetailPage() {
         </div>
       </div>
 
-      {/* Compositions */}
+      {/* Compositions — order: Geethe, Varna, Kruthi, Keertane */}
       <div className="sv-card p-6" style={{ background: '#15112A' }}>
         <div className="ornament mb-6">
           <span style={{ fontSize: '0.85rem', letterSpacing: '0.2em', color: 'rgba(201,168,76,0.6)', textTransform: 'uppercase', fontWeight: 500, fontFamily: 'var(--font-body)' }}>
             Compositions
           </span>
         </div>
-        {(['GEETHE', 'KRUTHI', 'KEERTANE', 'VARNA'] as const).map(type => (
+        {(['GEETHE', 'VARNA', 'KRUTHI', 'KEERTANE'] as const).map(type => (
           <CompositionSection
             key={type}
             ragaId={id!}

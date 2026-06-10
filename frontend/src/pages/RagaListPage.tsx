@@ -28,9 +28,7 @@ export default function RagaListPage() {
     <Layout>
       {/* Hero */}
       <div className="text-center mb-10">
-        <div className="ornament mb-4">
-          <span>♩ ♪ ♫</span>
-        </div>
+        <div className="ornament mb-4"><span>♩ ♪ ♫</span></div>
         <h1 style={{ fontFamily: 'var(--font-display)', fontSize: '2.6rem', fontWeight: 700, color: '#E8C96A', margin: '0 0 0.5rem', letterSpacing: '-0.02em', lineHeight: 1.2 }}>
           Raga Sangrah
         </h1>
@@ -65,7 +63,7 @@ export default function RagaListPage() {
           onChange={e => { setJanyaFilter(e.target.value as any); setPage(0) }}
         >
           <option value="all">All Ragas</option>
-          <option value="melakarta">Melakarta</option>
+          <option value="melakarta">Janaka</option>
           <option value="janya">Janya</option>
         </select>
       </div>
@@ -99,7 +97,7 @@ export default function RagaListPage() {
                   </p>
                   {raga.janya ? (
                     <p style={{ fontSize: '0.78rem', color: '#fdba74', margin: 0 }}>
-                      Janya of <span style={{ fontWeight: 600 }}>{raga.janakaRagaName}</span>
+                      Janaka: <span style={{ fontWeight: 600 }}>{raga.janakaRagaName}</span>
                     </p>
                   ) : (
                     <p style={{ fontSize: '0.78rem', color: '#93c5fd', margin: 0 }}>
@@ -114,7 +112,7 @@ export default function RagaListPage() {
                     </span>
                   )}
                   <span className={raga.janya ? 'badge-janya' : 'badge-mela'}>
-                    {raga.janya ? 'Janya' : 'Melakarta'}
+                    {raga.janya ? 'Janya' : 'Janaka'}
                   </span>
                 </div>
               </Link>

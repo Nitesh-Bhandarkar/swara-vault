@@ -2,6 +2,7 @@ package com.swara.vault.controller;
 
 import com.swara.vault.exception.ForbiddenOperationException;
 import com.swara.vault.exception.ResourceNotFoundException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -27,6 +28,11 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ForbiddenOperationException.class)
     public ResponseEntity<?> handleForbidden(ForbiddenOperationException ex) {
         return ResponseEntity.status(403).body(Map.of("message", ex.getMessage()));
+    }
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<?> handleDataIntegrity(DataIntegrityViolationException ex) {
+        return ResponseEntity.status(409).body(Map.of("message", "Cannot delete: this raga is referenced by other ragas"));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
