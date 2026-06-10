@@ -10,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.UUID;
 
 @Service
@@ -29,7 +30,7 @@ public class CompositionService {
             .name(req.name())
             .tala(req.tala())
             .description(req.description())
-            .audioUrl(req.audioUrl())
+            .audioUrls(req.audioUrls() != null ? new ArrayList<>(req.audioUrls()) : new ArrayList<>())
             .build();
         return CompositionDto.from(compositionRepository.save(composition));
     }
@@ -42,7 +43,7 @@ public class CompositionService {
         composition.setName(req.name());
         composition.setTala(req.tala());
         composition.setDescription(req.description());
-        composition.setAudioUrl(req.audioUrl());
+        composition.setAudioUrls(req.audioUrls() != null ? new ArrayList<>(req.audioUrls()) : new ArrayList<>());
         return CompositionDto.from(compositionRepository.save(composition));
     }
 

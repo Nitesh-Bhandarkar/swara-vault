@@ -26,6 +26,7 @@ export default function AudioUpload({ ragaId, compositionId, existingUrl, onUplo
     try {
       const { data } = await getUploadUrl(ragaId, file.name, file.type, compositionId)
       await uploadToR2(data.uploadUrl, file)
+      if (inputRef.current) inputRef.current.value = ''
       onUploaded(data.publicUrl)
     } catch {
       setError('Upload failed. Try again.')

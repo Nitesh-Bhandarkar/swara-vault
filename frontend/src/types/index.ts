@@ -6,7 +6,7 @@ export interface Composition {
   name: string
   tala: string
   description: string | null
-  audioUrl: string | null
+  audioUrls: string[]
 }
 
 export interface Raga {

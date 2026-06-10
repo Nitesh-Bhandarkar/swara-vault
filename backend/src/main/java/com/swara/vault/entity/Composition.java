@@ -2,6 +2,8 @@ package com.swara.vault.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -30,6 +32,10 @@ public class Composition {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "audio_url")
-    private String audioUrl;
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "composition_audio_url", joinColumns = @JoinColumn(name = "composition_id"))
+    @Column(name = "audio_url", nullable = false)
+    @OrderColumn(name = "position")
+    @Builder.Default
+    private List<String> audioUrls = new ArrayList<>();
 }

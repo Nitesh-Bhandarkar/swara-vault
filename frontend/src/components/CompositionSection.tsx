@@ -14,7 +14,7 @@ interface Props {
 }
 
 const empty = (type: CompositionType): Omit<Composition, 'id'> => ({
-  type, name: '', tala: '', description: '', audioUrl: null,
+  type, name: '', tala: '', description: '', audioUrls: [],
 })
 
 const TYPE_COLORS: Record<CompositionType, { bg: string; border: string; text: string; dot: string }> = {
@@ -51,7 +51,7 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
   }
 
   const startEdit = (c: Composition) => {
-    setForm({ type: c.type, name: c.name, tala: c.tala, description: c.description, audioUrl: c.audioUrl })
+    setForm({ type: c.type, name: c.name, tala: c.tala, description: c.description, audioUrls: c.audioUrls ?? [] })
     setEditingId(c.id)
     setAdding(false)
     setSaveError('')
@@ -161,7 +161,13 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
                   <p style={{ fontWeight: 600, color: '#F0E4C8', margin: '0 0 0.2rem', fontSize: '0.95rem', fontFamily: 'var(--font-display)' }}>{c.name}</p>
                   <p style={{ fontSize: '0.78rem', color: colors.text, margin: '0 0 0.35rem', fontWeight: 500 }}>Tala: {c.tala}</p>
                   {c.description && <p style={{ fontSize: '0.82rem', color: 'rgba(240,228,200,0.55)', margin: '0 0 0.5rem' }}>{c.description}</p>}
-                  {c.audioUrl && <AudioPlayer url={c.audioUrl} />}
+                  {c.audioUrls?.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                      {c.audioUrls.map((url, i) => (
+                        <AudioPlayer key={i} url={url} label={c.audioUrls.length > 1 ? `Recording ${i + 1}` : undefined} />
+                      ))}
+                    </div>
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.4rem', marginLeft: '1rem', flexShrink: 0 }}>
                   {confirmDeleteId === c.id ? (
@@ -231,7 +237,32 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
               </div>
               {ragaId !== 'new' && (
                 <div style={{ marginBottom: '0.75rem' }}>
-                  <AudioUpload ragaId={ragaId} compositionId={editingId ?? undefined} existingUrl={form.audioUrl} onUploaded={url => setForm(f => ({ ...f, audioUrl: url }))} label="audio" />
+                  <label style={{ display: 'block', fontSize: '0.72rem', fontWeight: 600, color: 'rgba(201,168,76,0.65)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.45rem' }}>
+                    Audio Files
+                  </label>
+                  {form.audioUrls.length > 0 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem', marginBottom: '0.5rem' }}>
+                      {form.audioUrls.map((_, idx) => (
+                        <div key={idx} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: 500 }}>✓ File {idx + 1}</span>
+                          <button
+                            type="button"
+                            onClick={() => setForm(f => ({ ...f, audioUrls: f.audioUrls.filter((__, i) => i !== idx) }))}
+                            style={{ fontSize: '0.7rem', color: 'rgba(239,68,68,0.75)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, textDecoration: 'underline' }}
+                          >
+                            Remove
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <AudioUpload
+                    ragaId={ragaId}
+                    compositionId={editingId ?? undefined}
+                    existingUrl={null}
+                    onUploaded={url => setForm(f => ({ ...f, audioUrls: [...f.audioUrls, url] }))}
+                    label="audio file"
+                  />
                 </div>
               )}
               {saveError && <p style={{ color: '#FCA5A5', fontSize: '0.8rem', marginBottom: '0.5rem' }}>{saveError}</p>}
