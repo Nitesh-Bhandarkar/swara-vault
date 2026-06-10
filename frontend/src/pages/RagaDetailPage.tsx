@@ -54,19 +54,21 @@ export default function RagaDetailPage() {
 
       {/* Hero header */}
       <div
-        className="sv-card mb-6"
+        className="sv-card mb-4"
         style={{
           background: 'linear-gradient(135deg, #1E1246 0%, #2D0F1E 60%, #1E1246 100%)',
           border: '1px solid rgba(201,168,76,0.25)',
           padding: '2rem 2.5rem',
           position: 'relative',
-          overflow: 'hidden',
         }}
       >
-        <div className="absolute right-8 top-4 hidden md:flex gap-5 opacity-20">
-          <span className="note-float" style={{ color: '#E8C96A', fontSize: '2.5rem', fontFamily: 'serif' }}>𝄞</span>
-          <span className="note-float-2" style={{ color: '#E8C96A', fontSize: '1.8rem', fontFamily: 'serif' }}>♫</span>
-          <span className="note-float-3" style={{ color: '#E8C96A', fontSize: '2rem', fontFamily: 'serif' }}>♪</span>
+        {/* Decorative notes — contained in their own overflow:hidden layer */}
+        <div style={{ position: 'absolute', inset: 0, overflow: 'hidden', borderRadius: '1rem', pointerEvents: 'none' }}>
+          <div className="absolute right-8 top-4 hidden md:flex gap-5 opacity-20">
+            <span className="note-float" style={{ color: '#E8C96A', fontSize: '2.5rem', fontFamily: 'serif' }}>𝄞</span>
+            <span className="note-float-2" style={{ color: '#E8C96A', fontSize: '1.8rem', fontFamily: 'serif' }}>♫</span>
+            <span className="note-float-3" style={{ color: '#E8C96A', fontSize: '2rem', fontFamily: 'serif' }}>♪</span>
+          </div>
         </div>
 
         <div className="flex items-start justify-between">
@@ -88,53 +90,81 @@ export default function RagaDetailPage() {
               </p>
             )}
           </div>
-          <div className="flex gap-2 shrink-0 mt-1" style={{ alignItems: 'flex-start' }}>
+          <div className="shrink-0 mt-1">
             <Link to={`/ragas/${id}/edit`} className="btn-outline" style={{ fontSize: '0.85rem', padding: '0.45rem 1rem', textDecoration: 'none' }}>
               Edit
             </Link>
-            {raga.seeded ? (
-              <span
-                title="Seeded ragas cannot be deleted"
-                style={{ fontSize: '0.85rem', padding: '0.45rem 1rem', background: 'transparent', border: '1.5px solid rgba(239,68,68,0.15)', color: 'rgba(252,165,165,0.3)', borderRadius: '0.5rem', cursor: 'not-allowed', display: 'inline-block' }}
-              >
-                Delete
-              </span>
-            ) : !confirmDelete ? (
-              <button
-                type="button"
-                onClick={() => { setConfirmDelete(true); setDeleteError('') }}
-                style={{ fontSize: '0.85rem', padding: '0.45rem 1rem', background: 'transparent', border: '1.5px solid rgba(239,68,68,0.35)', color: 'rgba(252,165,165,0.8)', borderRadius: '0.5rem', cursor: 'pointer', transition: 'all 0.2s' }}
-              >
-                Delete
-              </button>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.4rem' }}>
-                <p style={{ fontSize: '0.78rem', color: 'rgba(252,165,165,0.9)', margin: 0, whiteSpace: 'nowrap' }}>
-                  Delete "{raga.name}"?
-                </p>
-                <div style={{ display: 'flex', gap: '0.4rem' }}>
-                  <button
-                    type="button"
-                    onClick={handleDelete}
-                    disabled={deleting}
-                    style={{ fontSize: '0.78rem', padding: '0.3rem 0.8rem', background: 'rgba(239,68,68,0.15)', border: '1.5px solid rgba(239,68,68,0.5)', color: '#fca5a5', borderRadius: '0.4rem', cursor: deleting ? 'not-allowed' : 'pointer' }}
-                  >
-                    {deleting ? 'Deleting…' : 'Yes, delete'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setConfirmDelete(false); setDeleteError('') }}
-                    style={{ fontSize: '0.78rem', padding: '0.3rem 0.8rem', background: 'transparent', border: '1.5px solid rgba(201,168,76,0.25)', color: 'rgba(201,168,76,0.6)', borderRadius: '0.4rem', cursor: 'pointer' }}
-                  >
-                    Cancel
-                  </button>
-                </div>
-                {deleteError && <p style={{ fontSize: '0.72rem', color: '#fca5a5', margin: 0 }}>{deleteError}</p>}
-              </div>
-            )}
           </div>
         </div>
       </div>
+
+      {/* Delete action — outside the hero card to avoid any overflow/stacking issues */}
+      {!raga.seeded && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          {!confirmDelete ? (
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <button
+                type="button"
+                onClick={() => { setConfirmDelete(true); setDeleteError('') }}
+                style={{
+                  fontSize: '0.82rem', padding: '0.4rem 0.9rem',
+                  background: 'transparent',
+                  border: '1.5px solid rgba(239,68,68,0.35)',
+                  color: 'rgba(252,165,165,0.75)',
+                  borderRadius: '0.5rem', cursor: 'pointer', transition: 'all 0.2s',
+                }}
+                onMouseOver={e => { e.currentTarget.style.borderColor = 'rgba(239,68,68,0.65)'; e.currentTarget.style.color = '#fca5a5' }}
+                onMouseOut={e => { e.currentTarget.style.borderColor = 'rgba(239,68,68,0.35)'; e.currentTarget.style.color = 'rgba(252,165,165,0.75)' }}
+              >
+                Delete Raga
+              </button>
+            </div>
+          ) : (
+            <div style={{
+              background: 'rgba(239,68,68,0.06)',
+              border: '1.5px solid rgba(239,68,68,0.3)',
+              borderRadius: '0.75rem',
+              padding: '1rem 1.25rem',
+            }}>
+              <p style={{ color: 'rgba(252,165,165,0.9)', fontSize: '0.88rem', margin: '0 0 0.75rem', fontWeight: 500 }}>
+                Permanently delete "{raga.name}"? This cannot be undone.
+              </p>
+              <div style={{ display: 'flex', gap: '0.6rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                <button
+                  type="button"
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  style={{
+                    fontSize: '0.85rem', padding: '0.5rem 1.2rem',
+                    background: 'rgba(239,68,68,0.15)',
+                    border: '1.5px solid rgba(239,68,68,0.6)',
+                    color: '#fca5a5', borderRadius: '0.5rem',
+                    cursor: deleting ? 'not-allowed' : 'pointer', fontWeight: 600,
+                    opacity: deleting ? 0.6 : 1,
+                  }}
+                >
+                  {deleting ? 'Deleting…' : 'Yes, delete'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setConfirmDelete(false); setDeleteError('') }}
+                  style={{
+                    fontSize: '0.85rem', padding: '0.5rem 1.2rem',
+                    background: 'transparent',
+                    border: '1.5px solid rgba(201,168,76,0.25)',
+                    color: 'rgba(201,168,76,0.7)', borderRadius: '0.5rem', cursor: 'pointer',
+                  }}
+                >
+                  Cancel
+                </button>
+                {deleteError && (
+                  <span style={{ fontSize: '0.8rem', color: '#fca5a5' }}>{deleteError}</span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Arohana / Avarohana */}
       <div className="sv-card mb-6 p-6" style={{ background: '#15112A' }}>
