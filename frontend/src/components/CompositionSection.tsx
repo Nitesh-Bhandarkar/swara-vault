@@ -30,6 +30,9 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
   const [open, setOpen] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
+  // Which composition has an active SequencePlayer, and what track/time it's on
+  const [seqState, setSeqState] = useState<{ compId: string; idx: number; time: number; duration: number } | null>(null)
+
   // Which modal is visible
   const [modalMode, setModalMode] = useState<'add' | 'edit' | 'delete' | null>(null)
   // Composition being edited or deleted
@@ -353,9 +356,29 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
                   {c.description && <p style={{ fontSize: '0.82rem', color: 'rgba(240,228,200,0.55)', margin: '0 0 0.5rem' }}>{c.description}</p>}
                   {c.audioUrls?.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
-                      {c.audioUrls.length > 1 && <SequencePlayer urls={c.audioUrls} />}
+                      {c.audioUrls.length > 1 && (
+                        <SequencePlayer
+                          urls={c.audioUrls}
+                          onActiveIndex={idx => {
+                            if (idx === null) {
+                              setSeqState(prev => prev?.compId === c.id ? null : prev)
+                            } else {
+                              setSeqState(prev => ({ compId: c.id, idx, time: prev?.compId === c.id ? prev.time : 0, duration: prev?.compId === c.id ? prev.duration : 0 }))
+                            }
+                          }}
+                          onTimeUpdate={(time, duration) => {
+                            setSeqState(prev => prev?.compId === c.id ? { ...prev, time, duration } : prev)
+                          }}
+                        />
+                      )}
                       {c.audioUrls.map((url, i) => (
-                        <AudioPlayer key={i} url={url} label={c.audioUrls.length > 1 ? `Recording ${i + 1}` : undefined} />
+                        <AudioPlayer
+                          key={i}
+                          url={url}
+                          label={c.audioUrls.length > 1 ? `Recording ${i + 1}` : undefined}
+                          sequenceTime={seqState?.compId === c.id && seqState.idx === i ? seqState.time : undefined}
+                          sequenceDuration={seqState?.compId === c.id && seqState.idx === i ? seqState.duration : undefined}
+                        />
                       ))}
                     </div>
                   )}

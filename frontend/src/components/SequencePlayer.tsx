@@ -1,37 +1,37 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { acquirePlayback, releasePlayback } from '../utils/audioCoordinator'
 
-interface Props { urls: string[] }
-
-function fmt(s: number) {
-  if (!isFinite(s) || s < 0) return '0:00'
-  const m = Math.floor(s / 60)
-  return `${m}:${Math.floor(s % 60).toString().padStart(2, '0')}`
+interface Props {
+  urls: string[]
+  onActiveIndex?: (idx: number | null) => void
+  onTimeUpdate?: (time: number, duration: number) => void
 }
 
 const SPEEDS = [1, 1.25, 1.5, 2]
 
-export default function SequencePlayer({ urls }: Props) {
-  const audioRef  = useRef<HTMLAudioElement>(null)
-  const indexRef  = useRef(0)
-  const speedRef  = useRef(1)
-  const [playing, setPlaying]         = useState(false)
-  const [index, setIndex]             = useState(0)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration]       = useState(0)
-  const [speed, setSpeed]             = useState(1)
+export default function SequencePlayer({ urls, onActiveIndex, onTimeUpdate }: Props) {
+  const audioRef          = useRef<HTMLAudioElement>(null)
+  const indexRef          = useRef(0)
+  const speedRef          = useRef(1)
+  const onActiveIndexRef  = useRef(onActiveIndex)
+  const onTimeUpdateRef   = useRef(onTimeUpdate)
+  const [playing, setPlaying] = useState(false)
+  const [index, setIndex]     = useState(0)
+  const [speed, setSpeed]     = useState(1)
+
+  useEffect(() => { onActiveIndexRef.current = onActiveIndex })
+  useEffect(() => { onTimeUpdateRef.current = onTimeUpdate })
 
   const resetState = () => {
     indexRef.current = 0
     setIndex(0)
-    setCurrentTime(0)
-    setDuration(0)
   }
 
   const stopSelf = useCallback(() => {
     audioRef.current?.pause()
     setPlaying(false)
     resetState()
+    onActiveIndexRef.current?.(null)
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => () => releasePlayback(stopSelf), [stopSelf])
@@ -41,8 +41,7 @@ export default function SequencePlayer({ urls }: Props) {
     if (!a) return
     indexRef.current = idx
     setIndex(idx)
-    setCurrentTime(0)
-    setDuration(0)
+    onActiveIndexRef.current?.(idx)
     a.src = urls[idx]
     a.load()
     a.play().catch(() => {})
@@ -59,8 +58,10 @@ export default function SequencePlayer({ urls }: Props) {
     audioRef.current?.pause()
     setPlaying(false)
     resetState()
+    onActiveIndexRef.current?.(null)
   }
 
+  const goPrev = () => playFrom((indexRef.current - 1 + urls.length) % urls.length)
   const goNext = () => playFrom((indexRef.current + 1) % urls.length)
 
   const changeSpeed = (s: number) => {
@@ -70,8 +71,6 @@ export default function SequencePlayer({ urls }: Props) {
   }
 
   const handleEnded = () => playFrom((indexRef.current + 1) % urls.length)
-
-  const pct = duration > 0 ? (currentTime / duration) * 100 : 0
 
   const miniBtn = (active: boolean, onClick: () => void, children: React.ReactNode) => (
     <button
@@ -89,7 +88,7 @@ export default function SequencePlayer({ urls }: Props) {
   )
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '0.15rem' }}>
+    <div style={{ marginBottom: '0.15rem' }}>
 
       {/* Controls row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
@@ -115,15 +114,31 @@ export default function SequencePlayer({ urls }: Props) {
 
         {playing && (
           <>
-            {/* Track + time */}
+            {/* Track indicator */}
             <span style={{ fontSize: '0.72rem', color: '#C9A84C', fontWeight: 600, whiteSpace: 'nowrap' }}>
               ♪ {index + 1}/{urls.length}
             </span>
-            <span style={{ fontSize: '0.72rem', color: 'rgba(201,168,76,0.5)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-              {fmt(currentTime)} / {fmt(duration)}
-            </span>
 
-            {/* Next */}
+            {/* Prev / Next */}
+            {urls.length > 1 && (
+              <button
+                onClick={goPrev}
+                title="Previous recording"
+                style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '0.2rem',
+                  fontSize: '0.7rem', padding: '0.18rem 0.55rem',
+                  background: 'transparent',
+                  border: '1px solid rgba(201,168,76,0.25)',
+                  color: 'rgba(201,168,76,0.65)',
+                  borderRadius: '0.35rem', cursor: 'pointer', transition: 'all 0.15s',
+                  fontWeight: 500,
+                }}
+                onMouseEnter={e => { e.currentTarget.style.borderColor = '#C9A84C'; e.currentTarget.style.color = '#E8C96A' }}
+                onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(201,168,76,0.25)'; e.currentTarget.style.color = 'rgba(201,168,76,0.65)' }}
+              >
+                ⏮ Prev
+              </button>
+            )}
             <button
               onClick={goNext}
               title="Next recording"
@@ -150,34 +165,21 @@ export default function SequencePlayer({ urls }: Props) {
         )}
       </div>
 
-      {/* Seek bar — only while playing */}
-      {playing && (
-        <input
-          type="range" className="sv-seek"
-          min={0} max={duration || 0} step={0.05} value={currentTime}
-          onChange={e => {
-            const a = audioRef.current
-            if (!a) return
-            const t = parseFloat(e.target.value)
-            a.currentTime = t
-            setCurrentTime(t)
-          }}
-          style={{ background: `linear-gradient(to right, #C9A84C ${pct}%, rgba(201,168,76,0.15) ${pct}%)` }}
-        />
-      )}
-
       <audio
         ref={audioRef}
         onEnded={handleEnded}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onError={() => stop()}
-        onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
+        onTimeUpdate={() => {
+          const t = audioRef.current?.currentTime ?? 0
+          onTimeUpdateRef.current?.(t, audioRef.current?.duration ?? 0)
+        }}
         onLoadedMetadata={() => {
           const a = audioRef.current
           if (!a) return
-          setDuration(a.duration)
           a.playbackRate = speedRef.current
+          onTimeUpdateRef.current?.(0, a.duration)
         }}
       />
     </div>

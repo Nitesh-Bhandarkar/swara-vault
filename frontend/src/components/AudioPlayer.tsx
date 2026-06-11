@@ -1,7 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { acquirePlayback, releasePlayback } from '../utils/audioCoordinator'
 
-interface Props { url: string; label?: string }
+interface Props {
+  url: string
+  label?: string
+  sequenceTime?: number
+  sequenceDuration?: number
+}
 
 function fmt(s: number) {
   if (!isFinite(s) || s < 0) return '0:00'
@@ -11,12 +16,16 @@ function fmt(s: number) {
 
 const SPEEDS = [1, 1.25, 1.5, 2]
 
-export default function AudioPlayer({ url, label }: Props) {
+export default function AudioPlayer({ url, label, sequenceTime, sequenceDuration }: Props) {
   const audioRef = useRef<HTMLAudioElement>(null)
   const [playing, setPlaying]         = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration]       = useState(0)
   const [speed, setSpeed]             = useState(1)
+
+  const isSequenceActive = sequenceTime !== undefined
+  const displayTime      = isSequenceActive ? sequenceTime! : currentTime
+  const displayDuration  = isSequenceActive ? sequenceDuration! : duration
 
   // Stable stop callback registered with the coordinator
   const stopSelf = useCallback(() => {
@@ -51,7 +60,8 @@ export default function AudioPlayer({ url, label }: Props) {
     setSpeed(s)
   }
 
-  const pct = duration > 0 ? (currentTime / duration) * 100 : 0
+  const showAsPlaying = playing || isSequenceActive
+  const pct = displayDuration > 0 ? (displayTime / displayDuration) * 100 : 0
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.45rem', minWidth: '220px', maxWidth: '380px' }}>
@@ -65,7 +75,7 @@ export default function AudioPlayer({ url, label }: Props) {
           onClick={toggle}
           style={{
             display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-            background: playing
+            background: showAsPlaying
               ? 'linear-gradient(135deg, #92400e, #d97706)'
               : 'linear-gradient(135deg, #1E1246, #2D0F1E)',
             color: '#E8C96A',
@@ -75,25 +85,28 @@ export default function AudioPlayer({ url, label }: Props) {
             fontSize: '0.8rem', fontWeight: 500,
             cursor: 'pointer', transition: 'all 0.2s',
             letterSpacing: '0.03em',
-            boxShadow: playing ? '0 0 12px rgba(217,119,6,0.4)' : 'none',
+            boxShadow: showAsPlaying ? '0 0 12px rgba(217,119,6,0.4)' : 'none',
             flexShrink: 0,
           }}
         >
-          <span style={{ fontSize: '1rem' }}>{playing ? '⏸' : '▶'}</span>
-          {playing ? 'Pause' : 'Play'}
+          <span style={{ fontSize: '1rem' }}>{showAsPlaying ? '⏸' : '▶'}</span>
+          {showAsPlaying ? 'Pause' : 'Play'}
         </button>
 
         <span style={{ fontSize: '0.72rem', color: 'rgba(201,168,76,0.55)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-          {fmt(currentTime)} / {fmt(duration)}
+          {fmt(displayTime)} / {fmt(displayDuration)}
         </span>
       </div>
 
-      {/* Seek bar */}
+      {/* Seek bar — read-only while sequence controls playback */}
       <input
         type="range" className="sv-seek"
-        min={0} max={duration || 0} step={0.05} value={currentTime}
-        onChange={handleSeek}
-        style={{ background: `linear-gradient(to right, #C9A84C ${pct}%, rgba(201,168,76,0.15) ${pct}%)` }}
+        min={0} max={displayDuration || 0} step={0.05} value={displayTime}
+        onChange={isSequenceActive ? () => {} : handleSeek}
+        style={{
+          background: `linear-gradient(to right, #C9A84C ${pct}%, rgba(201,168,76,0.15) ${pct}%)`,
+          pointerEvents: isSequenceActive ? 'none' : 'auto',
+        }}
       />
 
       {/* Speed controls */}
