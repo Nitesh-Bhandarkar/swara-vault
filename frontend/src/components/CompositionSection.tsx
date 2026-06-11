@@ -353,10 +353,10 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
                   {c.description && <p style={{ fontSize: '0.82rem', color: 'rgba(240,228,200,0.55)', margin: '0 0 0.5rem' }}>{c.description}</p>}
                   {c.audioUrls?.length > 0 && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
+                      {c.audioUrls.length > 1 && <SequencePlayer urls={c.audioUrls} />}
                       {c.audioUrls.map((url, i) => (
                         <AudioPlayer key={i} url={url} label={c.audioUrls.length > 1 ? `Recording ${i + 1}` : undefined} />
                       ))}
-                      {c.audioUrls.length > 1 && <SequencePlayer urls={c.audioUrls} />}
                     </div>
                   )}
                 </div>
