@@ -25,10 +25,15 @@ public class StorageConfig {
     @Value("${storage.s3.region:us-east-1}")
     private String region;
 
+    private boolean hasEndpoint() {
+        return endpoint != null && !endpoint.isBlank()
+            && (endpoint.startsWith("http://") || endpoint.startsWith("https://"));
+    }
+
     @Bean
     public S3Client s3Client() {
         var builder = S3Client.builder().region(Region.of(region));
-        if (!endpoint.isBlank()) builder.endpointOverride(URI.create(endpoint));
+        if (hasEndpoint()) builder.endpointOverride(URI.create(endpoint));
         if (!accessKey.isBlank())
             builder.credentialsProvider(StaticCredentialsProvider.create(
                 AwsBasicCredentials.create(accessKey, secretKey)));
@@ -38,7 +43,7 @@ public class StorageConfig {
     @Bean
     public S3Presigner s3Presigner() {
         var builder = S3Presigner.builder().region(Region.of(region));
-        if (!endpoint.isBlank()) builder.endpointOverride(URI.create(endpoint));
+        if (hasEndpoint()) builder.endpointOverride(URI.create(endpoint));
         if (!accessKey.isBlank())
             builder.credentialsProvider(StaticCredentialsProvider.create(
                 AwsBasicCredentials.create(accessKey, secretKey)));

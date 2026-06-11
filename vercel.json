@@ -4,7 +4,7 @@
   "installCommand": "echo skip",
   "ignoreCommand": "git diff HEAD^ HEAD --quiet -- frontend/",
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://swara-vault-production.up.railway.app/api/:path*" },
+    { "source": "/api/:path*", "destination": "http://ec2-13-203-199-91.ap-south-1.compute.amazonaws.com:8080/api/:path*" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
