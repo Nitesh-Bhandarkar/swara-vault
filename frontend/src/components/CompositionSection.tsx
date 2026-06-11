@@ -4,6 +4,7 @@ import AudioPlayer from './AudioPlayer'
 import AudioUpload from './AudioUpload'
 import Modal from './Modal'
 import NoteSpinner from './NoteSpinner'
+import SequencePlayer from './SequencePlayer'
 import { addComposition, updateComposition, deleteComposition } from '../api/ragas'
 
 interface Props {
@@ -355,6 +356,7 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
                       {c.audioUrls.map((url, i) => (
                         <AudioPlayer key={i} url={url} label={c.audioUrls.length > 1 ? `Recording ${i + 1}` : undefined} />
                       ))}
+                      {c.audioUrls.length > 1 && <SequencePlayer urls={c.audioUrls} />}
                     </div>
                   )}
                 </div>

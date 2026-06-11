@@ -1,4 +1,5 @@
-import { useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { acquirePlayback, releasePlayback } from '../utils/audioCoordinator'
 
 interface Props { url: string; label?: string }
 
@@ -16,28 +17,25 @@ export default function AudioPlayer({ url, label }: Props) {
   const [currentTime, setCurrentTime] = useState(0)
   const [duration, setDuration]       = useState(0)
   const [speed, setSpeed]             = useState(1)
-  const [ended, setEnded]             = useState(false)
+
+  // Stable stop callback registered with the coordinator
+  const stopSelf = useCallback(() => {
+    audioRef.current?.pause()
+    setPlaying(false)
+  }, [])
+
+  useEffect(() => () => releasePlayback(stopSelf), [stopSelf])
 
   const toggle = () => {
     const a = audioRef.current
     if (!a) return
     if (playing) {
       a.pause()
+      releasePlayback(stopSelf)
     } else {
-      setEnded(false)
-      a.play()
+      acquirePlayback(stopSelf)
+      a.play().catch(() => {})
     }
-    setPlaying(!playing)
-  }
-
-  const replay = () => {
-    const a = audioRef.current
-    if (!a) return
-    a.currentTime = 0
-    a.play()
-    setCurrentTime(0)
-    setPlaying(true)
-    setEnded(false)
   }
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -61,7 +59,7 @@ export default function AudioPlayer({ url, label }: Props) {
         <span style={{ fontSize: '0.78rem', color: '#92785E', letterSpacing: '0.04em' }}>{label}</span>
       )}
 
-      {/* Play + time + repeat */}
+      {/* Play / Pause + time */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
         <button
           onClick={toggle}
@@ -85,47 +83,17 @@ export default function AudioPlayer({ url, label }: Props) {
           {playing ? 'Pause' : 'Play'}
         </button>
 
-        <span style={{
-          fontSize: '0.72rem', color: 'rgba(201,168,76,0.55)',
-          fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap',
-        }}>
+        <span style={{ fontSize: '0.72rem', color: 'rgba(201,168,76,0.55)', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
           {fmt(currentTime)} / {fmt(duration)}
         </span>
-
-        {ended && (
-          <button
-            onClick={replay}
-            style={{
-              display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
-              background: 'rgba(201,168,76,0.1)',
-              color: '#C9A84C',
-              border: '1px solid rgba(201,168,76,0.35)',
-              borderRadius: '999px',
-              padding: '0.3rem 0.8rem',
-              fontSize: '0.78rem', fontWeight: 500,
-              cursor: 'pointer', transition: 'all 0.2s',
-              letterSpacing: '0.03em', flexShrink: 0,
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(201,168,76,0.2)'; e.currentTarget.style.borderColor = '#C9A84C' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(201,168,76,0.1)'; e.currentTarget.style.borderColor = 'rgba(201,168,76,0.35)' }}
-          >
-            <span style={{ fontSize: '0.9rem' }}>↺</span> Repeat
-          </button>
-        )}
       </div>
 
       {/* Seek bar */}
       <input
-        type="range"
-        className="sv-seek"
-        min={0}
-        max={duration || 0}
-        step={0.05}
-        value={currentTime}
+        type="range" className="sv-seek"
+        min={0} max={duration || 0} step={0.05} value={currentTime}
         onChange={handleSeek}
-        style={{
-          background: `linear-gradient(to right, #C9A84C ${pct}%, rgba(201,168,76,0.15) ${pct}%)`,
-        }}
+        style={{ background: `linear-gradient(to right, #C9A84C ${pct}%, rgba(201,168,76,0.15) ${pct}%)` }}
       />
 
       {/* Speed controls */}
@@ -136,8 +104,7 @@ export default function AudioPlayer({ url, label }: Props) {
             key={s}
             onClick={() => changeSpeed(s)}
             style={{
-              fontSize: '0.7rem', padding: '0.15rem 0.45rem',
-              borderRadius: '0.35rem',
+              fontSize: '0.7rem', padding: '0.15rem 0.45rem', borderRadius: '0.35rem',
               border: `1px solid ${speed === s ? '#C9A84C' : 'rgba(201,168,76,0.2)'}`,
               background: speed === s ? 'rgba(201,168,76,0.15)' : 'transparent',
               color: speed === s ? '#E8C96A' : 'rgba(201,168,76,0.45)',
@@ -152,9 +119,10 @@ export default function AudioPlayer({ url, label }: Props) {
       <audio
         ref={audioRef}
         src={url}
-        onEnded={() => { setPlaying(false); setCurrentTime(0); setEnded(true) }}
+        loop
+        onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
-        onError={() => setPlaying(false)}
+        onError={() => { setPlaying(false); releasePlayback(stopSelf) }}
         onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
         onLoadedMetadata={() => setDuration(audioRef.current?.duration ?? 0)}
       />
