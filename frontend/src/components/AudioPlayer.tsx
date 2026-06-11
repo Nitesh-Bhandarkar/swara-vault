@@ -12,16 +12,32 @@ const SPEEDS = [1, 1.25, 1.5, 2]
 
 export default function AudioPlayer({ url, label }: Props) {
   const audioRef = useRef<HTMLAudioElement>(null)
-  const [playing, setPlaying]       = useState(false)
+  const [playing, setPlaying]         = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration]     = useState(0)
-  const [speed, setSpeed]           = useState(1)
+  const [duration, setDuration]       = useState(0)
+  const [speed, setSpeed]             = useState(1)
+  const [ended, setEnded]             = useState(false)
 
   const toggle = () => {
     const a = audioRef.current
     if (!a) return
-    playing ? a.pause() : a.play()
+    if (playing) {
+      a.pause()
+    } else {
+      setEnded(false)
+      a.play()
+    }
     setPlaying(!playing)
+  }
+
+  const replay = () => {
+    const a = audioRef.current
+    if (!a) return
+    a.currentTime = 0
+    a.play()
+    setCurrentTime(0)
+    setPlaying(true)
+    setEnded(false)
   }
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -45,7 +61,7 @@ export default function AudioPlayer({ url, label }: Props) {
         <span style={{ fontSize: '0.78rem', color: '#92785E', letterSpacing: '0.04em' }}>{label}</span>
       )}
 
-      {/* Play + time */}
+      {/* Play + time + repeat */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
         <button
           onClick={toggle}
@@ -75,6 +91,27 @@ export default function AudioPlayer({ url, label }: Props) {
         }}>
           {fmt(currentTime)} / {fmt(duration)}
         </span>
+
+        {ended && (
+          <button
+            onClick={replay}
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: '0.3rem',
+              background: 'rgba(201,168,76,0.1)',
+              color: '#C9A84C',
+              border: '1px solid rgba(201,168,76,0.35)',
+              borderRadius: '999px',
+              padding: '0.3rem 0.8rem',
+              fontSize: '0.78rem', fontWeight: 500,
+              cursor: 'pointer', transition: 'all 0.2s',
+              letterSpacing: '0.03em', flexShrink: 0,
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(201,168,76,0.2)'; e.currentTarget.style.borderColor = '#C9A84C' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(201,168,76,0.1)'; e.currentTarget.style.borderColor = 'rgba(201,168,76,0.35)' }}
+          >
+            <span style={{ fontSize: '0.9rem' }}>↺</span> Repeat
+          </button>
+        )}
       </div>
 
       {/* Seek bar */}
@@ -115,7 +152,7 @@ export default function AudioPlayer({ url, label }: Props) {
       <audio
         ref={audioRef}
         src={url}
-        onEnded={() => { setPlaying(false); setCurrentTime(0) }}
+        onEnded={() => { setPlaying(false); setCurrentTime(0); setEnded(true) }}
         onPause={() => setPlaying(false)}
         onError={() => setPlaying(false)}
         onTimeUpdate={() => setCurrentTime(audioRef.current?.currentTime ?? 0)}
