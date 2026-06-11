@@ -1,10 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Composition, CompositionType } from '../types'
 import AudioPlayer from './AudioPlayer'
 import AudioUpload from './AudioUpload'
 import Modal from './Modal'
 import NoteSpinner from './NoteSpinner'
-import SequencePlayer from './SequencePlayer'
+import SequencePlayer, { type SequencePlayerHandle } from './SequencePlayer'
 import { addComposition, updateComposition, deleteComposition } from '../api/ragas'
 
 interface Props {
@@ -30,8 +30,10 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
   const [open, setOpen] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
-  // Which composition has an active SequencePlayer, and what track/time it's on
-  const [seqState, setSeqState] = useState<{ compId: string; idx: number; time: number; duration: number } | null>(null)
+  // Which composition has an active SequencePlayer, and what track/time/speed it's on
+  const [seqState, setSeqState] = useState<{ compId: string; idx: number; time: number; duration: number; speed: number } | null>(null)
+  // Refs to each composition's SequencePlayer for imperative seek
+  const seqHandles = useRef<Map<string, SequencePlayerHandle>>(new Map())
 
   // Which modal is visible
   const [modalMode, setModalMode] = useState<'add' | 'edit' | 'delete' | null>(null)
@@ -358,16 +360,26 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem' }}>
                       {c.audioUrls.length > 1 && (
                         <SequencePlayer
+                          ref={handle => {
+                            if (handle) seqHandles.current.set(c.id, handle)
+                            else seqHandles.current.delete(c.id)
+                          }}
                           urls={c.audioUrls}
                           onActiveIndex={idx => {
                             if (idx === null) {
                               setSeqState(prev => prev?.compId === c.id ? null : prev)
                             } else {
-                              setSeqState(prev => ({ compId: c.id, idx, time: prev?.compId === c.id ? prev.time : 0, duration: prev?.compId === c.id ? prev.duration : 0 }))
+                              setSeqState(prev => ({
+                                compId: c.id, idx, time: 0, duration: 0,
+                                speed: prev?.compId === c.id ? prev.speed : 1,
+                              }))
                             }
                           }}
                           onTimeUpdate={(time, duration) => {
                             setSeqState(prev => prev?.compId === c.id ? { ...prev, time, duration } : prev)
+                          }}
+                          onSpeedChange={speed => {
+                            setSeqState(prev => prev?.compId === c.id ? { ...prev, speed } : prev)
                           }}
                         />
                       )}
@@ -378,6 +390,10 @@ export default function CompositionSection({ ragaId, type, title, compositions, 
                           label={c.audioUrls.length > 1 ? `Recording ${i + 1}` : undefined}
                           sequenceTime={seqState?.compId === c.id && seqState.idx === i ? seqState.time : undefined}
                           sequenceDuration={seqState?.compId === c.id && seqState.idx === i ? seqState.duration : undefined}
+                          sequenceSpeed={seqState?.compId === c.id ? seqState.speed : undefined}
+                          onSeek={seqState?.compId === c.id && seqState.idx === i
+                            ? t => seqHandles.current.get(c.id)?.seek(t)
+                            : undefined}
                         />
                       ))}
                     </div>

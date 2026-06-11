@@ -1,26 +1,44 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import { acquirePlayback, releasePlayback } from '../utils/audioCoordinator'
+
+export interface SequencePlayerHandle {
+  seek: (t: number) => void
+}
 
 interface Props {
   urls: string[]
   onActiveIndex?: (idx: number | null) => void
   onTimeUpdate?: (time: number, duration: number) => void
+  onSpeedChange?: (speed: number) => void
 }
 
 const SPEEDS = [1, 1.25, 1.5, 2]
 
-export default function SequencePlayer({ urls, onActiveIndex, onTimeUpdate }: Props) {
+const SequencePlayer = forwardRef<SequencePlayerHandle, Props>(function SequencePlayer(
+  { urls, onActiveIndex, onTimeUpdate, onSpeedChange }, ref
+) {
   const audioRef          = useRef<HTMLAudioElement>(null)
   const indexRef          = useRef(0)
   const speedRef          = useRef(1)
   const onActiveIndexRef  = useRef(onActiveIndex)
   const onTimeUpdateRef   = useRef(onTimeUpdate)
+  const onSpeedChangeRef  = useRef(onSpeedChange)
   const [playing, setPlaying] = useState(false)
   const [index, setIndex]     = useState(0)
   const [speed, setSpeed]     = useState(1)
 
   useEffect(() => { onActiveIndexRef.current = onActiveIndex })
   useEffect(() => { onTimeUpdateRef.current = onTimeUpdate })
+  useEffect(() => { onSpeedChangeRef.current = onSpeedChange })
+
+  useImperativeHandle(ref, () => ({
+    seek: (t: number) => {
+      const a = audioRef.current
+      if (!a) return
+      a.currentTime = t
+      onTimeUpdateRef.current?.(t, a.duration)
+    },
+  }))
 
   const resetState = () => {
     indexRef.current = 0
@@ -68,6 +86,7 @@ export default function SequencePlayer({ urls, onActiveIndex, onTimeUpdate }: Pr
     speedRef.current = s
     setSpeed(s)
     if (audioRef.current) audioRef.current.playbackRate = s
+    onSpeedChangeRef.current?.(s)
   }
 
   const handleEnded = () => playFrom((indexRef.current + 1) % urls.length)
@@ -184,4 +203,6 @@ export default function SequencePlayer({ urls, onActiveIndex, onTimeUpdate }: Pr
       />
     </div>
   )
-}
+})
+
+export default SequencePlayer

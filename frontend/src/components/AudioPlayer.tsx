@@ -6,6 +6,8 @@ interface Props {
   label?: string
   sequenceTime?: number
   sequenceDuration?: number
+  sequenceSpeed?: number
+  onSeek?: (time: number) => void
 }
 
 function fmt(s: number) {
@@ -16,7 +18,7 @@ function fmt(s: number) {
 
 const SPEEDS = [1, 1.25, 1.5, 2]
 
-export default function AudioPlayer({ url, label, sequenceTime, sequenceDuration }: Props) {
+export default function AudioPlayer({ url, label, sequenceTime, sequenceDuration, sequenceSpeed, onSeek }: Props) {
   const audioRef = useRef<HTMLAudioElement>(null)
   const [playing, setPlaying]         = useState(false)
   const [currentTime, setCurrentTime] = useState(0)
@@ -42,17 +44,26 @@ export default function AudioPlayer({ url, label, sequenceTime, sequenceDuration
       a.pause()
       releasePlayback(stopSelf)
     } else {
+      // Inherit speed from sequence when taking over
+      if (isSequenceActive && sequenceSpeed !== undefined) {
+        setSpeed(sequenceSpeed)
+        a.playbackRate = sequenceSpeed
+      }
       acquirePlayback(stopSelf)
       a.play().catch(() => {})
     }
   }
 
   const handleSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const a = audioRef.current
-    if (!a) return
     const t = parseFloat(e.target.value)
-    a.currentTime = t
-    setCurrentTime(t)
+    if (isSequenceActive) {
+      onSeek?.(t)
+    } else {
+      const a = audioRef.current
+      if (!a) return
+      a.currentTime = t
+      setCurrentTime(t)
+    }
   }
 
   const changeSpeed = (s: number) => {
@@ -98,35 +109,37 @@ export default function AudioPlayer({ url, label, sequenceTime, sequenceDuration
         </span>
       </div>
 
-      {/* Seek bar — read-only while sequence controls playback */}
+      {/* Seek bar */}
       <input
         type="range" className="sv-seek"
         min={0} max={displayDuration || 0} step={0.05} value={displayTime}
-        onChange={isSequenceActive ? () => {} : handleSeek}
-        style={{
-          background: `linear-gradient(to right, #C9A84C ${pct}%, rgba(201,168,76,0.15) ${pct}%)`,
-          pointerEvents: isSequenceActive ? 'none' : 'auto',
-        }}
+        onChange={handleSeek}
+        style={{ background: `linear-gradient(to right, #C9A84C ${pct}%, rgba(201,168,76,0.15) ${pct}%)` }}
       />
 
-      {/* Speed controls */}
+      {/* Speed controls — read-only while sequence controls playback */}
       <div style={{ display: 'flex', gap: '0.3rem', alignItems: 'center' }}>
         <span style={{ fontSize: '0.68rem', color: 'rgba(201,168,76,0.4)', letterSpacing: '0.08em', marginRight: '0.1rem' }}>SPEED</span>
-        {SPEEDS.map(s => (
-          <button
-            key={s}
-            onClick={() => changeSpeed(s)}
-            style={{
-              fontSize: '0.7rem', padding: '0.15rem 0.45rem', borderRadius: '0.35rem',
-              border: `1px solid ${speed === s ? '#C9A84C' : 'rgba(201,168,76,0.2)'}`,
-              background: speed === s ? 'rgba(201,168,76,0.15)' : 'transparent',
-              color: speed === s ? '#E8C96A' : 'rgba(201,168,76,0.45)',
-              cursor: 'pointer', transition: 'all 0.15s', fontWeight: speed === s ? 600 : 400,
-            }}
-          >
-            {s}×
-          </button>
-        ))}
+        {SPEEDS.map(s => {
+          const activeSpeed = isSequenceActive && sequenceSpeed !== undefined ? sequenceSpeed : speed
+          const isActive = activeSpeed === s
+          return (
+            <button
+              key={s}
+              onClick={isSequenceActive ? undefined : () => changeSpeed(s)}
+              style={{
+                fontSize: '0.7rem', padding: '0.15rem 0.45rem', borderRadius: '0.35rem',
+                border: `1px solid ${isActive ? '#C9A84C' : 'rgba(201,168,76,0.2)'}`,
+                background: isActive ? 'rgba(201,168,76,0.15)' : 'transparent',
+                color: isActive ? '#E8C96A' : 'rgba(201,168,76,0.45)',
+                cursor: isSequenceActive ? 'default' : 'pointer',
+                transition: 'all 0.15s', fontWeight: isActive ? 600 : 400,
+              }}
+            >
+              {s}×
+            </button>
+          )
+        })}
       </div>
 
       <audio
