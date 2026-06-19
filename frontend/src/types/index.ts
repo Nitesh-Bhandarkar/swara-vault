@@ -1,4 +1,4 @@
-export type CompositionType = 'GEETHE' | 'KRUTHI' | 'KEERTANE' | 'VARNA'
+export type CompositionType = 'GEETHE' | 'JATHI_SWARA' | 'KRUTHI' | 'KEERTANE' | 'VARNA'
 
 export interface Composition {
   id: string

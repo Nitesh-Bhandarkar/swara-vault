@@ -20,10 +20,11 @@ const empty = (type: CompositionType): Omit<Composition, 'id'> => ({
 })
 
 const TYPE_COLORS: Record<CompositionType, { bg: string; border: string; text: string; dot: string }> = {
-  GEETHE:   { bg: 'rgba(30,58,138,0.18)',  border: 'rgba(147,197,253,0.2)', text: '#93c5fd', dot: '#3b82f6' },
-  KRUTHI:   { bg: 'rgba(120,53,15,0.22)',  border: 'rgba(253,186,116,0.2)', text: '#fdba74', dot: '#f97316' },
-  KEERTANE: { bg: 'rgba(20,83,45,0.2)',    border: 'rgba(134,239,172,0.2)', text: '#86efac', dot: '#22c55e' },
-  VARNA:    { bg: 'rgba(76,29,149,0.22)',  border: 'rgba(216,180,254,0.2)', text: '#d8b4fe', dot: '#a855f7' },
+  GEETHE:      { bg: 'rgba(30,58,138,0.18)',  border: 'rgba(147,197,253,0.2)', text: '#93c5fd', dot: '#3b82f6' },
+  JATHI_SWARA: { bg: 'rgba(21,94,117,0.22)',  border: 'rgba(103,232,249,0.2)', text: '#67e8f9', dot: '#06b6d4' },
+  KRUTHI:      { bg: 'rgba(120,53,15,0.22)',  border: 'rgba(253,186,116,0.2)', text: '#fdba74', dot: '#f97316' },
+  KEERTANE:    { bg: 'rgba(20,83,45,0.2)',    border: 'rgba(134,239,172,0.2)', text: '#86efac', dot: '#22c55e' },
+  VARNA:       { bg: 'rgba(76,29,149,0.22)',  border: 'rgba(216,180,254,0.2)', text: '#d8b4fe', dot: '#a855f7' },
 }
 
 export default function CompositionSection({ ragaId, type, title, compositions, onChanged }: Props) {

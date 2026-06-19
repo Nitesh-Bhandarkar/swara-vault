@@ -1,5 +1,5 @@
 package com.swara.vault.entity;
 
 public enum CompositionType {
-    GEETHE, KRUTHI, KEERTANE, VARNA
+    GEETHE, JATHI_SWARA, KRUTHI, KEERTANE, VARNA
 }

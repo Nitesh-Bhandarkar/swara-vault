@@ -187,19 +187,19 @@ export default function RagaDetailPage() {
         </div>
       </div>
 
-      {/* Compositions — order: Geethe, Varna, Kruthi, Keertane */}
+      {/* Compositions — order: Geethe, Jathi Swara, Varna, Kruthi, Keertane */}
       <div className="sv-card p-6" style={{ background: '#15112A' }}>
         <div className="ornament mb-6">
           <span style={{ fontSize: '0.85rem', letterSpacing: '0.2em', color: 'rgba(201,168,76,0.6)', textTransform: 'uppercase', fontWeight: 500, fontFamily: 'var(--font-body)' }}>
             Compositions
           </span>
         </div>
-        {(['GEETHE', 'VARNA', 'KRUTHI', 'KEERTANE'] as const).map(type => (
+        {(['GEETHE', 'JATHI_SWARA', 'VARNA', 'KRUTHI', 'KEERTANE'] as const).map(type => (
           <CompositionSection
             key={type}
             ragaId={id!}
             type={type}
-            title={type.charAt(0) + type.slice(1).toLowerCase()}
+            title={type.split('_').map(w => w.charAt(0) + w.slice(1).toLowerCase()).join(' ')}
             compositions={raga.compositions}
             onChanged={refresh}
           />
