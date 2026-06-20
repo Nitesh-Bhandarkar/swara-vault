@@ -32,7 +32,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<?> handleDataIntegrity(DataIntegrityViolationException ex) {
-        return ResponseEntity.status(409).body(Map.of("message", "Cannot delete: this raga is referenced by other ragas"));
+        String root = ex.getMostSpecificCause().getMessage();
+        String message;
+        if (root != null && root.contains("foreign key") || root != null && root.contains("fk_")) {
+            message = "Cannot delete: this raga is referenced by other ragas";
+        } else {
+            message = "Data integrity error: " + (root != null ? root : ex.getMessage());
+        }
+        return ResponseEntity.status(409).body(Map.of("message", message));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
