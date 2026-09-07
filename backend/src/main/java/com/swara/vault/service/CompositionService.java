@@ -20,6 +20,7 @@ public class CompositionService {
 
     private final CompositionRepository compositionRepository;
     private final RagaRepository ragaRepository;
+    private final SnapshotTrigger snapshotTrigger;
 
     public CompositionDto add(UUID ragaId, CompositionRequest req) {
         Raga raga = ragaRepository.findById(ragaId)
@@ -32,7 +33,9 @@ public class CompositionService {
             .description(req.description())
             .audioUrls(req.audioUrls() != null ? new ArrayList<>(req.audioUrls()) : new ArrayList<>())
             .build();
-        return CompositionDto.from(compositionRepository.save(composition));
+        CompositionDto dto = CompositionDto.from(compositionRepository.save(composition));
+        snapshotTrigger.scheduleBackup();
+        return dto;
     }
 
     public CompositionDto update(UUID ragaId, UUID compositionId, CompositionRequest req) {
@@ -44,7 +47,9 @@ public class CompositionService {
         composition.setTala(req.tala());
         composition.setDescription(req.description());
         composition.setAudioUrls(req.audioUrls() != null ? new ArrayList<>(req.audioUrls()) : new ArrayList<>());
-        return CompositionDto.from(compositionRepository.save(composition));
+        CompositionDto dto = CompositionDto.from(compositionRepository.save(composition));
+        snapshotTrigger.scheduleBackup();
+        return dto;
     }
 
     public void delete(UUID ragaId, UUID compositionId) {
@@ -52,5 +57,6 @@ public class CompositionService {
             .filter(c -> c.getRaga().getId().equals(ragaId))
             .orElseThrow(() -> new IllegalArgumentException("Composition not found"));
         compositionRepository.delete(composition);
+        snapshotTrigger.scheduleBackup();
     }
 }

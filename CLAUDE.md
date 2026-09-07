@@ -16,28 +16,31 @@ Carnatic music reference application. A personal vault to catalog Ragas, their A
                              │ Session cookie — first-party on vercel.app
 ┌───────────────────────────▼─────────────────────────────────┐
 │  Vercel Edge (API proxy)                                     │
-│  vercel.json rewrites /api/:path* → Railway                  │
+│  vercel.json rewrites /api/:path* → EC2 backend               │
 │  Makes all API calls same-origin — fixes mobile Chrome       │
 │  third-party cookie blocking                                 │
 └───────────────────────────┬─────────────────────────────────┘
                              │ HTTPS forwarded
 ┌───────────────────────────▼─────────────────────────────────┐
 │  Spring Boot 3.5  (Java 21, Maven)                          │
-│  REST API · Spring Security · Spring Session JDBC           │
-│  Hosted on Railway                                           │
+│  REST API · Spring Security · in-memory HttpSession          │
+│  Hosted on EC2                                                │
 └───────────┬───────────────────────────┬─────────────────────┘
-            │ JDBC                       │ AWS SDK v2 (S3-compat)
+            │ in-process (JDBC)          │ AWS SDK v2 S3
 ┌───────────▼──────────┐   ┌────────────▼────────────────────┐
-│  PostgreSQL           │   │  Cloudflare R2                  │
-│  Hosted on Railway    │   │  Audio file storage             │
-│  Flyway migrations    │   │  Presigned PUT (upload)         │
-│  Session tables here  │   │  Public URL (playback)          │
+│  H2 (in-memory)       │   │  AWS S3                          │
+│  Lives in the app JVM │   │  Audio files + one DB snapshot   │
+│  Loaded from S3       │   │  object (H2 SCRIPT format)       │
+│  snapshot on boot     │   │  Presigned PUT (audio upload)    │
+│  Flyway on first boot │   │  Public URL (audio playback)     │
 └──────────────────────┘   └─────────────────────────────────┘
 ```
 
-**Auth flow:** Session-based. Spring Session JDBC stores session data in PostgreSQL (`spring_session` / `spring_session_attributes` tables). Frontend sends `credentials: include` on every request. Login sets `HttpOnly; SameSite=None; Secure` cookie. After login, `LoginPage` pre-populates the `['me']` TanStack Query cache via `qc.setQueryData` so `ProtectedRoute` renders immediately without a second round-trip.
+**Auth flow:** Session-based, container default in-memory `HttpSession` (Spring Session JDBC was removed — see `docs/adr/0001-postgres-to-h2-migration.md`). Frontend sends `credentials: include` on every request. Login sets `HttpOnly; SameSite=None; Secure` cookie. After login, `LoginPage` pre-populates the `['me']` TanStack Query cache via `qc.setQueryData` so `ProtectedRoute` renders immediately without a second round-trip. **Sessions do not survive an app restart/redeploy** — accepted trade-off for a single-user personal app.
 
-**Audio flow:** Frontend requests presigned PUT URL from `/api/storage/upload-url` → uploads file directly to R2 (bypassing backend) → stores returned public URL in the DB field. Playback uses the public URL directly in `<audio>`.
+**Audio flow:** Frontend requests presigned PUT URL from `/api/storage/upload-url` → uploads file directly to S3 (bypassing backend) → stores returned public URL in the DB field. Playback uses the public URL directly in `<audio>`.
+
+**Database persistence flow:** The database is an in-memory H2 instance living inside the app JVM — no separate DB server. On boot, `S3SnapshotService.restoreFromSnapshotIfPresent()` fetches the latest snapshot object from S3 (`storage.s3.snapshot-key`, an H2 `SCRIPT`-format SQL file) and `RUNSCRIPT`-loads it; if none exists yet (first-ever boot), Flyway runs `V1`–`V5` from scratch instead (seeding the 72 Melakarta ragas). Every raga/composition create/update/delete schedules an async, debounced-per-transaction snapshot re-upload (`SnapshotTrigger` → `S3SnapshotService.backupAsync()`), retried up to twice with exponential backoff (2s, 4s) before giving up and logging an error — the triggering HTTP request is never blocked or failed by a backup failure. See the ADR for the full design and the restore-from-an-older-S3-version runbook.
 
 ---
 
@@ -57,14 +60,14 @@ Carnatic music reference application. A personal vault to catalog Ragas, their A
 | Language | Java | 21 |
 | Build | Maven | wrapper included |
 | ORM | Spring Data JPA / Hibernate | via Boot |
-| DB migrations | Flyway | via Boot |
-| Auth / sessions | Spring Security + Spring Session JDBC | via Boot |
+| DB migrations | Flyway | via Boot (first-boot only — see below) |
+| Auth / sessions | Spring Security, container default `HttpSession` | via Boot |
 | File storage SDK | AWS SDK v2 S3 | 2.26.0 (BOM) |
 | CSV parsing | OpenCSV | 5.9 |
-| Database | PostgreSQL | latest on Railway |
-| File storage | Cloudflare R2 | S3-compatible |
+| Database | H2 (in-memory), S3-snapshot backed | 2.x |
+| File storage | AWS S3 | — |
 | Frontend host | Vercel | free tier |
-| Backend host | Railway | ~$5/mo credit |
+| Backend host | EC2 | — |
 
 ---
 
@@ -75,23 +78,27 @@ swara_vault/
 ├── CLAUDE.md                          ← this file
 ├── vercel.json                        ← Vercel build + /api proxy rewrite (repo root)
 ├── project-scope.md                   ← original requirements
+├── docs/adr/                          ← Architecture Decision Records (numbered, immutable once accepted)
+│   └── 0001-postgres-to-h2-migration.md
 │
 ├── backend/
 │   ├── pom.xml
 │   └── src/main/
 │       ├── java/com/swara/vault/
-│       │   ├── SwaraVaultApplication.java   @SpringBootApplication @EnableJdbcHttpSession
+│       │   ├── SwaraVaultApplication.java   @SpringBootApplication
 │       │   ├── config/
 │       │   │   ├── SecurityConfig.java      Spring Security, BCrypt, session entrypoint
-│       │   │   ├── StorageConfig.java       S3Client + S3Presigner beans for R2
-│       │   │   └── WebConfig.java           CORS mapping (/api/**)
+│       │   │   ├── StorageConfig.java       S3Client + S3Presigner beans (audio storage)
+│       │   │   ├── WebConfig.java           CORS mapping (/api/**)
+│       │   │   ├── AsyncConfig.java         @EnableAsync + snapshotExecutor/retry-scheduler beans
+│       │   │   └── DatabaseBootConfig.java  FlywayMigrationStrategy: S3 restore, else migrate()
 │       │   ├── entity/
 │       │   │   ├── Raga.java                Self-referencing (janakaRaga FK → raga)
 │       │   │   ├── Composition.java         Belongs to Raga, has CompositionType enum
-│       │   │   ├── CompositionType.java     GEETHE | KRUTHI | KEERTANE | VARNA
+│       │   │   ├── CompositionType.java     GEETHE | JATHI_SWARA | KRUTHI | KEERTANE | VARNA
 │       │   │   └── User.java                username, email, passwordHash
 │       │   ├── repository/
-│       │   │   ├── RagaRepository.java      search() JPQL, findByJanyaFalse...
+│       │   │   ├── RagaRepository.java      derived-query methods, no native/JPQL SQL
 │       │   │   ├── CompositionRepository.java
 │       │   │   └── UserRepository.java
 │       │   ├── dto/                         Java records used as request/response bodies
@@ -106,7 +113,9 @@ swara_vault/
 │       │   ├── service/
 │       │   │   ├── RagaService.java         CRUD + validation (janya/melakarta rules)
 │       │   │   ├── CompositionService.java
-│       │   │   ├── StorageService.java      Presigned URL generation for R2
+│       │   │   ├── StorageService.java      Presigned URL generation (audio upload)
+│       │   │   ├── S3SnapshotService.java   H2 SCRIPT ⇄ S3 snapshot load/backup + retry/backoff
+│       │   │   ├── SnapshotTrigger.java     Per-transaction-deduped backup scheduling on mutation
 │       │   │   ├── ImportService.java       CSV + JSON bulk import
 │       │   │   └── UserService.java         implements UserDetailsService
 │       │   └── controller/
@@ -118,7 +127,7 @@ swara_vault/
 │       └── resources/
 │           ├── application.yml
 │           └── db/migration/
-│               ├── V1__create_schema.sql    app_user, raga, composition, spring_session tables
+│               ├── V1__create_schema.sql    app_user, raga, composition (H2 syntax)
 │               └── V2__seed_melakarta.sql   72 Melakarta Ragas (Kanakangi → Rasikapriya)
 │
 └── frontend/
@@ -167,13 +176,16 @@ raga            id, name (unique), janya (bool),
                              janya=false ↔ melakarta_number set, janaka_raga_id null
 
 composition     id, raga_id (FK → raga CASCADE DELETE),
-                type (GEETHE|KRUTHI|KEERTANE|VARNA),
-                name, tala, description, audio_url
+                type (GEETHE|JATHI_SWARA|KRUTHI|KEERTANE|VARNA),
+                name, tala, description
 
-spring_session + spring_session_attributes   (managed by Spring Session JDBC)
+composition_audio_url   composition_id (FK → composition CASCADE DELETE),
+                audio_url, position   (ordered multi-audio-per-composition)
 ```
 
-**Seeded data:** 72 Melakarta Ragas are inserted by `V2__seed_melakarta.sql` at startup. `is_seeded=true` is informational only — all ragas including seeded ones can be deleted via the API.
+Runs as an **in-memory H2 database** inside the app JVM (no separate DB server/process) — see the Architecture diagram above and `docs/adr/0001-postgres-to-h2-migration.md`.
+
+**Seeded data:** on first-ever boot (no S3 snapshot yet), 72 Melakarta Ragas are inserted by `V2__seed_melakarta.sql`. `is_seeded=true` is informational only — all ragas including seeded ones can be deleted via the API. On every later boot, the full dataset (not just the seed) is restored from the S3 snapshot instead of re-running Flyway.
 
 ---
 
@@ -196,7 +208,7 @@ Ragas
   DELETE /api/ragas/:id         deletes any raga including seeded ones
 
 Compositions  (nested under a Raga)
-  POST   /api/ragas/:id/compositions              { type, name, tala, description, audioUrl }
+  POST   /api/ragas/:id/compositions              { type, name, tala, description, audioUrls: [...] }
   PUT    /api/ragas/:id/compositions/:cid
   DELETE /api/ragas/:id/compositions/:cid
 
@@ -225,22 +237,25 @@ Import
 - **Session cookie** must be `SameSite=None; Secure` because the Railway backend origin differs from Vercel. Combined with the Vercel proxy, this ensures cookies work on all browsers including mobile Chrome.
 - **NoteSpinner** — reusable `<NoteSpinner>` component (♩♪♫ bounce) used on every button that triggers an API call.
 - **AudioPlayer** — enhanced with a draggable seek bar (`sv-seek` CSS class, gold fill), current/total time display, and speed selector (1× 1.25× 1.5× 2×).
+- **Database is in-memory H2, backed by an S3 snapshot** (`docs/adr/0001-postgres-to-h2-migration.md`) — no managed DB service. `DatabaseBootConfig`'s `FlywayMigrationStrategy` tries `S3SnapshotService.restoreFromSnapshotIfPresent()` first; only runs Flyway's `V1`–`V5` from scratch when no snapshot exists (first-ever boot). Every mutation schedules an async full-snapshot re-upload via `SnapshotTrigger` (deduped per transaction, so a bulk CSV/JSON import triggers one upload, not N), retried up to twice with exponential backoff (2s, 4s) before giving up — never blocks or fails the triggering request.
+- **Sessions are no longer persisted** — Spring Session JDBC was removed along with Postgres; the app uses the servlet container's default in-memory `HttpSession`. Every restart/redeploy logs all users out (accepted trade-off, single-user app).
+- **`GlobalExceptionHandler`'s FK-violation detection uses `SQLState`** (`23503`/`23506`), not message string-matching — H2's exception message text differs from Postgres's, so string-matching would have silently broken the friendly "cannot delete: referenced" 409 response.
 
 ---
 
 ## Environment Variables
 
-### Backend (Railway)
+### Backend (EC2)
 | Variable | Description |
 |---|---|
-| `DATABASE_URL` | Railway PostgreSQL JDBC URL — `jdbc:postgresql://...` |
-| `R2_ENDPOINT` | Cloudflare R2 endpoint — `https://<accountid>.r2.cloudflarestorage.com` |
-| `R2_ACCESS_KEY` | R2 API token access key |
-| `R2_SECRET_KEY` | R2 API token secret key |
-| `R2_BUCKET` | R2 bucket name (e.g. `swara-vault-audio`) |
-| `R2_PUBLIC_URL` | Public URL for the R2 bucket (e.g. `https://pub-xxx.r2.dev`) |
+| `S3_BUCKET` | S3 bucket name — holds both audio files and the DB snapshot object |
+| `AWS_REGION` | AWS region (default `us-east-1`) |
+| `S3_ENDPOINT` | Blank for native AWS S3; set for a custom/S3-compatible endpoint |
+| `S3_ACCESS_KEY` / `S3_SECRET_KEY` | Blank to use the EC2 instance's IAM role; set to override |
+| `S3_PUBLIC_URL` | Public URL for the bucket (audio playback links) |
+| `S3_SNAPSHOT_KEY` | DB snapshot object key (default `db-seed/snapshot.sql`) — must match `backend/scripts/export-rds-to-h2-seed.sh`'s `S3_SEED_KEY` if that script is re-run |
 | `CORS_ALLOWED_ORIGINS` | Vercel frontend URL (e.g. `https://swara-vault.vercel.app`) |
-| `PORT` | Set automatically by Railway |
+| `PORT` | Server port (defaults to `8080`) |
 
 ### Frontend (Vercel)
 No frontend environment variables are required. `VITE_API_URL` is no longer read by the code — all API calls go through the Vercel proxy rewrite in `vercel.json`.
@@ -252,14 +267,14 @@ No frontend environment variables are required. `VITE_API_URL` is no longer read
 ## Development
 
 ```bash
-# Backend (needs local Postgres)
+# Backend (no external DB needed — H2 is in-memory)
 cd backend
-DATABASE_URL=jdbc:postgresql://localhost:5432/swara_dev \
-R2_ENDPOINT=https://xxx.r2.cloudflarestorage.com \
-R2_ACCESS_KEY=key R2_SECRET_KEY=secret \
-R2_BUCKET=swara-vault-audio R2_PUBLIC_URL=https://pub.r2.dev \
+S3_BUCKET=swara-vault-audio S3_PUBLIC_URL=https://pub.example.com \
+S3_ACCESS_KEY=key S3_SECRET_KEY=secret \
 CORS_ALLOWED_ORIGINS=http://localhost:5173 \
 ./mvnw spring-boot:run
+# With no S3_BUCKET set (or no snapshot object present yet), the app falls back
+# to Flyway on boot and starts with just the 72 seeded Melakarta ragas.
 
 # Frontend
 cd frontend
@@ -278,19 +293,19 @@ cd backend && ./mvnw compile -q
 
 ## Deployment Checklist
 
-1. **Railway** — create project → provision PostgreSQL → copy `DATABASE_URL`
-2. **Cloudflare R2** — create bucket → enable public access → create API token with Object Read & Write → copy endpoint + keys
-3. Set all backend env vars in Railway service settings
-4. Connect Railway service to GitHub repo (root: `backend/`) → deploy
-5. Flyway runs `V1` + `V2` on first startup — 72 Melakarta Ragas seeded automatically
-6. **Vercel** — import GitHub repo (repo root, not `frontend/`) → deploy (no env vars needed)
-7. Set `CORS_ALLOWED_ORIGINS` in Railway to the deployed Vercel URL
+1. **S3 bucket** — create bucket → enable **versioning** + a lifecycle rule expiring noncurrent versions after 30 days (the DB snapshot's only recovery mechanism, per the ADR) → grant the EC2 instance's IAM role (or an access key pair) Object Read & Write
+2. **EC2** — deploy the Spring Boot jar; set all backend env vars (see above)
+3. First-ever boot with no snapshot object present: Flyway runs `V1`–`V5` — 72 Melakarta Ragas seeded automatically. Every mutation thereafter re-uploads a full DB snapshot to S3 in the background.
+4. **Vercel** — import GitHub repo (repo root, not `frontend/`) → deploy (no env vars needed)
+5. Set `CORS_ALLOWED_ORIGINS` on EC2 to the deployed Vercel URL
+6. Rehearse the S3-version restore runbook at least once before relying on this in production (ADR resolved decision 5) — list object versions of the snapshot key, restore an older `VersionId`, restart, confirm the app boots with that older dataset.
 
 ---
 
 ## Known Constraints
 
-- Audio uploads require the Raga to be saved first (the `ragaId` is needed for the R2 file key). The form shows a note about this on the "Add" page.
+- Audio uploads require the Raga to be saved first (the `ragaId` is needed for the S3 file key). The form shows a note about this on the "Add" page.
+- The H2 database is entirely in-memory: all data lives only in the running JVM's heap between snapshot backups. A crash between a successful write and its (up to ~10s-delayed, with retries) S3 backup completing loses that write — see the ADR's "Costs / risks accepted" section.
 - Seeded Melakarta Ragas have `arohana`/`avarohana` left blank — the user fills these in via Edit.
 - The `application.properties` file left by Spring Initializr is an empty placeholder — `application.yml` is the active config.
 - The Vercel `vercel.json` must be at the **repo root** (not inside `frontend/`) for the API proxy rewrite to work correctly.
