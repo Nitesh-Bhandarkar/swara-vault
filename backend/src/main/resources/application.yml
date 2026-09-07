@@ -1,26 +1,20 @@
 spring:
   datasource:
-    url: ${APP_DB_URL}
-    username: ${APP_DB_USER:}
-    password: ${APP_DB_PASSWORD:}
-    driver-class-name: org.postgresql.Driver
+    url: jdbc:h2:mem:swaravault;DB_CLOSE_DELAY=-1;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
 
   jpa:
     hibernate:
       ddl-auto: validate
     properties:
       hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+        dialect: org.hibernate.dialect.H2Dialect
 
   flyway:
     enabled: true
     locations: classpath:db/migration
-
-  session:
-    store-type: jdbc
-    jdbc:
-      initialize-schema: never
-    timeout: 24h
 
   servlet:
     multipart:
@@ -44,6 +38,7 @@ storage:
     access-key: ${S3_ACCESS_KEY:}    # blank = use EC2 IAM role; set for R2/custom
     secret-key: ${S3_SECRET_KEY:}
     public-url: ${S3_PUBLIC_URL}     # CloudFront URL or S3/R2 public bucket URL
+    snapshot-key: ${S3_SNAPSHOT_KEY:db-seed/snapshot.sql}  # H2 SCRIPT snapshot object key (ADR 0001)
 
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS}

@@ -9,7 +9,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import java.sql.SQLException;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @RestControllerAdvice
@@ -30,16 +32,25 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(403).body(Map.of("message", ex.getMessage()));
     }
 
+    // Referential-integrity SQLState codes (portable across H2 and, previously, Postgres)
+    private static final Set<String> FOREIGN_KEY_SQL_STATES = Set.of("23503", "23506");
+
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<?> handleDataIntegrity(DataIntegrityViolationException ex) {
-        String root = ex.getMostSpecificCause().getMessage();
-        String message;
-        if (root != null && root.contains("foreign key") || root != null && root.contains("fk_")) {
-            message = "Cannot delete: this raga is referenced by other ragas";
-        } else {
-            message = "Data integrity error: " + (root != null ? root : ex.getMessage());
-        }
+        String sqlState = extractSqlState(ex);
+        String message = FOREIGN_KEY_SQL_STATES.contains(sqlState)
+            ? "Cannot delete: this raga is referenced by other ragas"
+            : "Data integrity error: " + rootMessage(ex);
         return ResponseEntity.status(409).body(Map.of("message", message));
+    }
+
+    private String extractSqlState(DataIntegrityViolationException ex) {
+        return (ex.getMostSpecificCause() instanceof SQLException sqlEx) ? sqlEx.getSQLState() : null;
+    }
+
+    private String rootMessage(DataIntegrityViolationException ex) {
+        String root = ex.getMostSpecificCause().getMessage();
+        return root != null ? root : ex.getMessage();
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)

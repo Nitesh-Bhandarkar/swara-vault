@@ -19,6 +19,7 @@ import java.util.UUID;
 public class RagaService {
 
     private final RagaRepository ragaRepository;
+    private final SnapshotTrigger snapshotTrigger;
 
     public Page<RagaDto> search(String query, Boolean janya, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("name"));
@@ -52,7 +53,9 @@ public class RagaService {
     public RagaDto create(RagaRequest req) {
         validate(req, null);
         Raga raga = buildRaga(new Raga(), req);
-        return RagaDto.from(ragaRepository.save(raga));
+        RagaDto dto = RagaDto.from(ragaRepository.save(raga));
+        snapshotTrigger.scheduleBackup();
+        return dto;
     }
 
     @Transactional
@@ -60,7 +63,9 @@ public class RagaService {
         Raga raga = ragaRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Raga not found: " + id));
         validate(req, id);
-        return RagaDto.from(ragaRepository.save(buildRaga(raga, req)));
+        RagaDto dto = RagaDto.from(ragaRepository.save(buildRaga(raga, req)));
+        snapshotTrigger.scheduleBackup();
+        return dto;
     }
 
     @Transactional
@@ -68,6 +73,7 @@ public class RagaService {
         Raga raga = ragaRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Raga not found: " + id));
         ragaRepository.delete(raga);
+        snapshotTrigger.scheduleBackup();
     }
 
     private void validate(RagaRequest req, UUID currentId) {
